@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sber Smart Home",
+        "description": "Подключение умных устройств Сбер"
+      },
+      "auth": {
+        "title": "Авторизация в Сбер",
+        "description": "Для подключения выполните авторизацию в аккаунте Сбер"
+      },
+      "code": {
+        "title": "Ввод кода",
+        "description": "Введите код из URL после авторизации"
+      }
+    },
+    "abort": {
+      "already_configured": "Уже настроено"
+    },
+    "error": {
+      "invalid_code": "Неверный код. Скопируйте code=XXX из URL.",
+      "missing_code": "Введите код",
+      "gateway_token_error": "Не удалось получить токен шлюза",
+      "connection_error": "Ошибка подключения"
+    }
+  }
+}

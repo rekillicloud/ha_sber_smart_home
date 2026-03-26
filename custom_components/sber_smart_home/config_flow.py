@@ -1,18 +1,15 @@
 """Config flow for Sber Smart Home."""
 
-import asyncio
 import logging
 import ssl
-import time
-from pathlib import Path
 from typing import Any
+import uuid
 
 import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.const import CONF_CODE
-from homeassistant.helpers import aiohttp_client
+from homeassistant.helpers import selector
 
 from .const import (
     AUTH_ENDPOINT,
@@ -25,12 +22,6 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required("access_token"): str,
-    }
-)
-
 
 def get_ssl_context() -> ssl.SSLContext:
     """Create SSL context for Sber API."""
@@ -41,7 +32,7 @@ def get_ssl_context() -> ssl.SSLContext:
 
 
 async def exchange_code_for_token(
-    auth_code: str, code_verifier: str = None
+    auth_code: str, code_verifier: str | None = None
 ) -> dict | None:
     """Exchange authorization code for access token."""
     ssl_context = get_ssl_context()
@@ -104,43 +95,133 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
+    def __init__(self):
+        """Initialize flow."""
+        self._code_verifier = None
+        self._auth_url = None
+
+    def _generate_code_verifier(self) -> str:
+        """Generate PKCE code verifier."""
+        import base64
+        import os
+
+        random_bytes = os.urandom(32)
+        return base64.urlsafe_b64encode(random_bytes).decode("rstrip=")
+
+    def _generate_code_challenge(self, verifier: str) -> str:
+        """Generate PKCE code challenge from verifier."""
+        import base64
+        import hashlib
+
+        digest = hashlib.sha256(verifier.encode()).digest()
+        return (
+            base64.urlsafe_b64encode(digest)
+            .decode("rstrip=")
+            .replace("+", "-")
+            .replace("/", "_")
+        )
+
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle the initial step."""
-        errors: dict[str, str] = {}
+        """Handle the initial step - show auth URL."""
+        self._code_verifier = self._generate_code_verifier()
+        code_challenge = self._generate_code_challenge(self._code_verifier)
 
-        if user_input is not None:
-            access_token = user_input.get("access_token", "")
-
-            if access_token:
-                gateway_token = await get_gateway_token(access_token)
-
-                if gateway_token:
-                    return self.async_create_entry(
-                        title="Sber Smart Home",
-                        data={
-                            "access_token": access_token,
-                            "gateway_token": gateway_token,
-                        },
-                    )
-                else:
-                    errors["base"] = "invalid_gateway_token"
-            else:
-                errors["base"] = "invalid_access_token"
+        self._auth_url = (
+            f"{AUTH_ENDPOINT}"
+            f"?response_type=code"
+            f"&client_id={CLIENT_ID}"
+            f"&redirect_uri={REDIRECT_URI}"
+            f"&scope=openid"
+            f"&code_challenge={code_challenge}"
+            f"&code_challenge_method=S256"
+            f"&state={uuid.uuid4().hex}"
+        )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=STEP_USER_DATA_SCHEMA,
             description_placeholders={
-                "auth_url": f"{AUTH_ENDPOINT}?response_type=code&client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&scope=openid",
-                "instructions": (
-                    "1. Откройте ссылку ниже в браузере\n"
-                    "2. Войдите в аккаунт Сбер\n"
-                    "3. Скопируйте code из URL после redirect (companionapp://host?code=XXX&state=YYY)\n"
-                    "4. Вставьте код в поле ниже\n"
-                    "5. Дождитесь получения токена (автоматически)"
-                ),
+                "auth_url": self._auth_url,
             },
+            data_schema=vol.Schema({}),
+        )
+
+    async def async_step_authorized(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle after user authorized."""
+        return self.async_show_form(
+            step_id="code",
+            description_placeholders={},
+            data_schema=vol.Schema(
+                {
+                    vol.Required("code"): str,
+                }
+            ),
+            errors={},
+        )
+
+    async def async_step_code(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle code submission."""
+        errors = {}
+
+        if user_input is not None:
+            code = user_input.get("code", "").strip()
+
+            if not code:
+                errors["code"] = "missing_code"
+                return self.async_show_form(
+                    step_id="code",
+                    data_schema=vol.Schema({vol.Required("code"): str}),
+                    errors=errors,
+                )
+
+            _LOGGER.info("Exchanging code for token...")
+
+            token_data = await exchange_code_for_token(code, self._code_verifier)
+
+            if not token_data:
+                errors["code"] = "invalid_code"
+                return self.async_show_form(
+                    step_id="code",
+                    description_placeholders={
+                        "error": "Неверный код. Попробуйте снова."
+                    },
+                    data_schema=vol.Schema({vol.Required("code"): str}),
+                    errors=errors,
+                )
+
+            access_token = token_data.get("access_token")
+            refresh_token = token_data.get("refresh_token", "")
+            expires_in = token_data.get("expires_in", 1800)
+
+            _LOGGER.info("Getting gateway token...")
+
+            gateway_token = await get_gateway_token(access_token)
+
+            if not gateway_token:
+                errors["base"] = "gateway_token_error"
+                return self.async_show_form(
+                    step_id="code",
+                    data_schema=vol.Schema({vol.Required("code"): str}),
+                    errors=errors,
+                )
+
+            return self.async_create_entry(
+                title="Sber Smart Home",
+                data={
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "gateway_token": gateway_token,
+                    "expires_in": expires_in,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="code",
+            data_schema=vol.Schema({vol.Required("code"): str}),
             errors=errors,
         )
