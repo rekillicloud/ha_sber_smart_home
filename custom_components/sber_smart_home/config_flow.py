@@ -136,19 +136,16 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initial step - show auth URL and ask for redirect URL."""
 
         if user_input is None:
-            data_schema = vol.Schema(
-                {
-                    vol.Required(
-                        "redirect_url",
-                        description="Для авторизации:\n\n1. Откройте ссылку: "
-                        + _AUTH_URL
-                        + "\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте URL из адресной строки (будет вида companionapp://host?code=XXX...) и вставьте ниже",
-                    ): str,
-                }
+            auth_description = (
+                "## Для авторизации:\n\n"
+                f"1. Откройте ссылку: [{_AUTH_URL}]({_AUTH_URL})\n\n"
+                "2. Авторизуйтесь в Сбер\n\n"
+                "3. Скопируйте URL из адресной строки (будет вида `companionapp://host?code=XXX...`) и вставьте ниже"
             )
             return self.async_show_form(
                 step_id="user",
-                data_schema=data_schema,
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                description=auth_description,
             )
 
         # User submitted the form with redirect URL
@@ -157,14 +154,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not redirect_url:
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Вставьте ссылку из адресной строки",
-                        ): str,
-                    }
-                ),
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                description="Вставьте ссылку из адресной строки",
                 errors={"redirect_url": "missing_url"},
             )
 
@@ -173,14 +164,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not match:
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Ссылка должна содержать code=",
-                        ): str,
-                    }
-                ),
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                description="Ссылка должна содержать code=",
                 errors={"redirect_url": "invalid_url"},
             )
 
@@ -192,14 +177,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not token_data:
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Неверный код. Попробуйте снова.",
-                        ): str,
-                    }
-                ),
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                description="Неверный код. Попробуйте снова.",
                 errors={"redirect_url": "invalid_code"},
             )
 
@@ -214,14 +193,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not gateway_token:
             return self.async_show_form(
                 step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Не удалось получить токен шлюза",
-                        ): str,
-                    }
-                ),
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                description="Не удалось получить токен шлюза",
                 errors={"redirect_url": "gateway_token_error"},
             )
 
