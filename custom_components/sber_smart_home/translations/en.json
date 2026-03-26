@@ -4,22 +4,15 @@
       "user": {
         "title": "Sber Smart Home",
         "description": "Connect Sber smart devices"
-      },
-      "auth": {
-        "title": "Sber Authorization",
-        "description": "Authorize with your Sber account"
-      },
-      "code": {
-        "title": "Enter Code",
-        "description": "Enter the code from URL after authorization"
       }
     },
     "abort": {
       "already_configured": "Already configured"
     },
     "error": {
-      "invalid_code": "Invalid code. Copy code=XXX from URL.",
-      "missing_code": "Please enter the code",
+      "invalid_code": "Invalid code from URL",
+      "missing_url": "Paste URL from address bar",
+      "invalid_url": "URL must contain code=",
       "gateway_token_error": "Failed to get gateway token",
       "connection_error": "Connection error"
     }

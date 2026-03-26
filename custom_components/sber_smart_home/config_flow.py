@@ -1,8 +1,8 @@
 """Config flow for Sber Smart Home."""
 
 import logging
+import re
 import ssl
-import uuid
 
 import aiohttp
 import voluptuous as vol
@@ -27,6 +27,30 @@ def get_ssl_context() -> ssl.SSLContext:
     ssl_context.check_verify_flags = ssl.CERT_NONE
     ssl_context.load_verify_locations(str(DEFAULT_SSL_CERT_PATH))
     return ssl_context
+
+
+def _generate_code_verifier() -> str:
+    """Generate PKCE code verifier."""
+    import base64
+    import os
+
+    random_bytes = os.urandom(32)
+    return base64.urlsafe_b64encode(random_bytes).decode().rstrip("=")
+
+
+def _generate_code_challenge(verifier: str) -> str:
+    """Generate PKCE code challenge from verifier."""
+    import base64
+    import hashlib
+
+    digest = hashlib.sha256(verifier.encode()).digest()
+    return (
+        base64.urlsafe_b64encode(digest)
+        .decode()
+        .rstrip("=")
+        .replace("+", "-")
+        .replace("/", "_")
+    )
 
 
 async def exchange_code_for_token(auth_code: str, code_verifier: str) -> dict | None:
@@ -95,34 +119,14 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._code_verifier: str | None = None
         self._auth_url: str | None = None
 
-    def _generate_code_verifier(self) -> str:
-        """Generate PKCE code verifier."""
-        import base64
-        import os
-
-        random_bytes = os.urandom(32)
-        return base64.urlsafe_b64encode(random_bytes).decode().rstrip("=")
-
-    def _generate_code_challenge(self, verifier: str) -> str:
-        """Generate PKCE code challenge from verifier."""
-        import base64
-        import hashlib
-
-        digest = hashlib.sha256(verifier.encode()).digest()
-        return (
-            base64.urlsafe_b64encode(digest)
-            .decode()
-            .rstrip("=")
-            .replace("+", "-")
-            .replace("/", "_")
-        )
-
     async def async_step_user(self, user_input=None):
-        """Initial step - show auth URL and ask for code."""
+        """Initial step - show auth URL and ask for redirect URL."""
         if user_input is None:
             # First time - generate auth URL
-            self._code_verifier = self._generate_code_verifier()
-            code_challenge = self._generate_code_challenge(self._code_verifier)
+            self._code_verifier = _generate_code_verifier()
+            code_challenge = _generate_code_challenge(self._code_verifier)
+
+            import uuid
 
             self._auth_url = (
                 f"{AUTH_ENDPOINT}"
@@ -140,22 +144,33 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 description_placeholders={"auth_url": self._auth_url},
                 data_schema=vol.Schema(
                     {
-                        vol.Required("code"): str,
+                        vol.Required("redirect_url"): str,
                     }
                 ),
             )
 
-        # User submitted the form with code
-        code = user_input.get("code", "").strip()
+        # User submitted the form with redirect URL
+        redirect_url = user_input.get("redirect_url", "").strip()
 
-        if not code:
+        if not redirect_url:
             return self.async_show_form(
                 step_id="user",
                 description_placeholders={"auth_url": self._auth_url},
-                data_schema=vol.Schema({vol.Required("code"): str}),
-                errors={"base": "missing_code"},
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                errors={"redirect_url": "missing_url"},
             )
 
+        # Parse code from redirect URL
+        match = re.search(r"code=([A-F0-9-]+)", redirect_url)
+        if not match:
+            return self.async_show_form(
+                step_id="user",
+                description_placeholders={"auth_url": self._auth_url},
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                errors={"redirect_url": "invalid_url"},
+            )
+
+        code = match.group(1)
         _LOGGER.info("Exchanging code for token...")
 
         token_data = await exchange_code_for_token(code, self._code_verifier)
@@ -164,8 +179,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 description_placeholders={"auth_url": self._auth_url},
-                data_schema=vol.Schema({vol.Required("code"): str}),
-                errors={"base": "invalid_code"},
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                errors={"redirect_url": "invalid_code"},
             )
 
         access_token = token_data.get("access_token")
@@ -180,8 +195,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 description_placeholders={"auth_url": self._auth_url},
-                data_schema=vol.Schema({vol.Required("code"): str}),
-                errors={"base": "gateway_token_error"},
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                errors={"redirect_url": "gateway_token_error"},
             )
 
         return self.async_create_entry(
