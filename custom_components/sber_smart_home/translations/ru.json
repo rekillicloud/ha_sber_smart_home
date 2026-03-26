@@ -3,10 +3,7 @@
     "step": {
       "user": {
         "title": "Sber Smart Home",
-        "description": "1. Перейдите по ссылке для авторизации: {auth_url}\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте URL из адресной строки (после редиректа) и вставьте ниже",
-        "data_schema": {
-          "redirect_url": "Вставьте ссылку вида companionapp://host?code=..."
-        }
+        "description": "Для авторизации:\n\n1. [Откройте ссылку]({auth_url})\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте URL из адресной строки (будет вида companionapp://host?code=XXX...) и вставьте ниже"
       }
     },
     "abort": {
