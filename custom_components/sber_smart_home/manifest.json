@@ -1,8 +1,8 @@
 {
   "domain": "sber_smart_home",
   "name": "Sber Smart Home",
-  "documentation": "https://github.com/rekillicloud/sber-smart-home",
-  "issue_tracker": "https://github.com/rekillicloud/sber-smart-home/issues",
+  "documentation": "https://github.com/rekillicloud/ha_sber_smart_home",
+  "issue_tracker": "https://github.com/rekillicloud/ha_sber_smart_home/issues",
   "dependencies": [],
   "codeowners": ["@rekillicloud"],
   "requirements": [

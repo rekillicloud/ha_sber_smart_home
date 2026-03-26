@@ -18,7 +18,7 @@
 2. Перейдите в "Репозитории"
 3. Нажмите "+" и добавьте URL репозитория:
    ```
-   https://github.com/rekillicloud/sber-smart-home
+https://github.com/rekillicloud/ha_sber_smart_home
    ```
 4. Установите интеграцию "Sber Smart Home"
 

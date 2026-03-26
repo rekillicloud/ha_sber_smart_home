@@ -1,6 +1,6 @@
 {
   "name": "Sber Smart Home",
   "description": "Интеграция умного дома Сбер для Home Assistant",
-  "repository_url": "https://github.com/rekillicloud/sber-smart-home",
+  "repository_url": "https://github.com/rekillicloud/ha_sber_smart_home",
   "topics": ["home-assistant", "sber", "smart-home", "hacs"]
 }
