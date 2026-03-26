@@ -3,7 +3,10 @@
     "step": {
       "user": {
         "title": "Sber Smart Home",
-        "description": "Подключение умных устройств Сбер"
+        "description": "1. Перейдите по ссылке для авторизации: {auth_url}\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте URL из адресной строки (после редиректа) и вставьте ниже",
+        "data_schema": {
+          "redirect_url": "Вставьте ссылку вида companionapp://host?code=..."
+        }
       }
     },
     "abort": {
