@@ -18,7 +18,7 @@
 2. Перейдите в "Репозитории"
 3. Нажмите "+" и добавьте URL репозитория:
    ```
-   https://github.com/YOUR_USERNAME/sber-smart-home
+   https://github.com/rekillicloud/sber-smart-home
    ```
 4. Установите интеграцию "Sber Smart Home"
 
@@ -55,7 +55,7 @@
 
 ```bash
 # Клонирование репозитория
-git clone https://github.com/YOUR_USERNAME/sber-smart-home.git
+git clone https://github.com/rekillicloud/sber-smart-home.git
 
 # Установка зависимостей
 pip install -r requirements.txt
@@ -69,4 +69,4 @@ MIT License
 
 ## Авторы
 
-- Your Name (@yourusername)
+- rekillicloud (@rekillicloud)

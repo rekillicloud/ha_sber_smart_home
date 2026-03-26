@@ -2,7 +2,7 @@
   "name": "Sber Smart Home",
   "description": "Интеграция умного дома Сбер для Home Assistant",
   "domain": "sber_smart_home",
-  "codeowners": ["@yourusername"],
+  "codeowners": ["@rekillicloud"],
   "version": "1.0.0",
   "zipfile": false,
   "themes": false,

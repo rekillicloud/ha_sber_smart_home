@@ -1,10 +1,10 @@
 {
   "domain": "sber_smart_home",
   "name": "Sber Smart Home",
-  "documentation": "https://github.com/yourgithub/sber-smart-home",
-  "issue_tracker": "https://github.com/yourgithub/sber-smart-home/issues",
+  "documentation": "https://github.com/rekillicloud/sber-smart-home",
+  "issue_tracker": "https://github.com/rekillicloud/sber-smart-home/issues",
   "dependencies": [],
-  "codeowners": ["@yourusername"],
+  "codeowners": ["@rekillicloud"],
   "requirements": [
     "aiohttp>=3.9.0",
     "authlib>=0.15.0"
