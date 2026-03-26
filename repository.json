@@ -1,0 +1,6 @@
+{
+  "name": "Sber Smart Home",
+  "description": "Интеграция умного дома Сбер для Home Assistant",
+  "repository_url": "https://github.com/YOUR_USERNAME/sber-smart-home",
+  "topics": ["home-assistant", "sber", "smart-home", "hacs"]
+}
