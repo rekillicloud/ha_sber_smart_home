@@ -136,9 +136,16 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initial step - show auth URL and ask for redirect URL."""
 
         if user_input is None:
+            description = (
+                "Для авторизации:\n\n"
+                f"1. [Откройте ссылку]({_AUTH_URL})\n\n"
+                "2. Авторизуйтесь в Сбер\n\n"
+                "3. Скопируйте URL из адресной строки (будет вида "
+                "companionapp://host?code=XXX...) и вставьте ниже"
+            )
             return self.async_show_form(
                 step_id="user",
-                description_placeholders={"auth_url": _AUTH_URL},
+                description=description,
                 data_schema=vol.Schema(
                     {
                         vol.Required("redirect_url"): str,
