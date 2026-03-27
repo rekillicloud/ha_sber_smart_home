@@ -173,11 +173,11 @@ class SberSmartHomeApi:
         try:
             async with self._session.request(
                 "PUT",
-                f"{GATEWAY_API}/devices/{device_id}/state",
+                f"{GATEWAY_API}/device_groups/light",
                 headers={"X-AUTH-jwt": self._gateway_token},
                 json={
                     "device_id": device_id,
-                    "desired_state": desired_state,
+                    "light_group_command_data": desired_state,
                     "timestamp": timestamp,
                 },
                 ssl=self._ssl_context,
