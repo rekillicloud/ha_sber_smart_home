@@ -158,6 +158,11 @@ class SberSmartHomeApi:
 
             desired_state.append(state_item)
 
+        _LOGGER.warning(
+            f"set_device_state: device_id={device_id}, state={desired_state}"
+        )
+        print(f"SBER_API: device_id={device_id}, state={desired_state}")
+
         return await self._request(
             "PUT",
             f"{GATEWAY_API}/devices/{device_id}/state",

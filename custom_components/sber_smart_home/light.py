@@ -242,6 +242,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "brightness" in kwargs:
             ha_brightness = kwargs["brightness"]
             sber_brightness = int(ha_brightness * 1000 / 255)
+            print(f"SBER: brightness={ha_brightness} -> sber={sber_brightness}")
             state_updates.append(
                 {
                     "key": "light_brightness",
