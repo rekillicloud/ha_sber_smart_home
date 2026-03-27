@@ -125,7 +125,7 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         reported = device.get("reported_state", [])
         for state in reported:
-            if state.get("key") == "on_off":
+            if state.get("key") == "switch_led":
                 return state.get("bool_value", False)
         return None
 
@@ -252,11 +252,12 @@ class SberLight(CoordinatorEntity, LightEntity):
             await self.coordinator.api.set_device_state(
                 self._device_id,
                 [
+                    {"key": "switch_led", "value": True, "attr_type": "BOOL"},
                     {
                         "key": "light_brightness",
                         "value": sber_brightness,
                         "attr_type": "INTEGER",
-                    }
+                    },
                 ],
             )
             self._brightness = ha_brightness
@@ -312,7 +313,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                     {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
                 )
 
-        state_updates.append({"key": "on_off", "value": True, "attr_type": "BOOL"})
+        state_updates.append({"key": "switch_led", "value": True, "attr_type": "BOOL"})
 
         await self.coordinator.api.set_device_state(self._device_id, state_updates)
 
@@ -325,7 +326,8 @@ class SberLight(CoordinatorEntity, LightEntity):
             return
 
         await self.coordinator.api.set_device_state(
-            self._device_id, [{"key": "on_off", "value": False, "attr_type": "BOOL"}]
+            self._device_id,
+            [{"key": "switch_led", "value": False, "attr_type": "BOOL"}],
         )
 
         self._is_on = False
