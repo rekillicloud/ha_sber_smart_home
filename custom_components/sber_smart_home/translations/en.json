@@ -1,9 +1,13 @@
 {
   "config": {
+    "flow_title": "Sber Smart Home",
     "step": {
       "user": {
         "title": "Sber Smart Home",
-        "description": "Connect Sber smart devices"
+        "description": "## Для авторизации:\n\n1. Откройте ссылку: [{auth_url}]({auth_url})\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте URL из адресной строки (будет вида `companionapp://host?code=XXX...`) и вставьте ниже",
+        "data": {
+          "redirect_url": "URL после авторизации"
+        }
       }
     },
     "abort": {
@@ -11,8 +15,8 @@
     },
     "error": {
       "invalid_code": "Invalid code from URL",
-      "missing_url": "Paste URL from address bar",
-      "invalid_url": "URL must contain code=",
+      "missing_url": "Вставьте URL из адресной строки",
+      "invalid_url": "URL должен содержать code=",
       "gateway_token_error": "Failed to get gateway token",
       "connection_error": "Connection error"
     }
