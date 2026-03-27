@@ -144,6 +144,13 @@ class SberLight(CoordinatorEntity, LightEntity):
                     ha_brightness = int((sber_brightness - 50) * 255 / 950)
                     return max(0, min(255, ha_brightness))
 
+        desired = device.get("desired_state", [])
+        for state in desired:
+            if state.get("key") == "light_brightness":
+                sber_brightness = int(state.get("integer_value", 50))
+                ha_brightness = int((sber_brightness - 50) * 255 / 950)
+                return max(0, min(255, ha_brightness))
+
         return None
 
     @property
@@ -243,7 +250,8 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         if "brightness" in kwargs:
             ha_brightness = kwargs["brightness"]
-            sber_brightness = ha_brightness * 1000 // 255
+            sber_brightness = 50 + (ha_brightness * 950 // 255)
+            sber_brightness = max(50, min(1000, sber_brightness))
             _LOGGER.warning(
                 f"SBER BRIGHTNESS: ha={ha_brightness}, sber={sber_brightness}"
             )
@@ -254,11 +262,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                     {"key": "on_off", "value": True, "attr_type": "BOOL"},
                     {"key": "switch_led", "value": True, "attr_type": "BOOL"},
                     {"key": "light_mode", "value": "white", "attr_type": "ENUM"},
-                    {
-                        "key": "light_brightness",
-                        "value": sber_brightness,
-                        "attr_type": "INTEGER",
-                    },
+                    {"key": "light_brightness", "integer_value": sber_brightness},
                 ],
             )
             self._brightness = ha_brightness
