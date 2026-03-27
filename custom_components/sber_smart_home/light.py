@@ -26,7 +26,28 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Sber Smart Home lights."""
-    print("=" * 60)
+    coordinator = hass.data[DOMAIN][entry.entry_id]
+
+    devices = coordinator.get_devices()
+    entities = []
+
+    for device in devices:
+        device_id = device.get("id")
+        device_name = device.get("name", {})
+        name = (
+            device_name.get("name", "Unknown")
+            if isinstance(device_name, dict)
+            else str(device_name)
+        )
+
+        attributes = device.get("attributes", [])
+        has_on_off = any(a.get("key") == "on_off" for a in attributes)
+        has_brightness = any(a.get("key") == "light_brightness" for a in attributes)
+
+        if has_on_off or has_brightness:
+            entities.append(SberLight(coordinator, device_id, name, device))
+
+    async_add_entities(entities)
     print("SBER_LIGHT: Starting light platform setup")
 
     coordinator = hass.data[DOMAIN][entry.entry_id]
@@ -68,12 +89,27 @@ async def async_setup_entry(
         if has_on_off or has_brightness:
             print(f"SBER_LIGHT: Adding {name} as light entity")
             _LOGGER.warning("Adding %s as light entity", name)
-            entities.append(SberLight(coordinator, device_id, name, device))
+            try:
+                light_entity = SberLight(coordinator, device_id, name, device)
+                entities.append(light_entity)
+                print(f"SBER_LIGHT: Created light entity for {name}")
+            except Exception as e:
+                print(f"SBER_LIGHT ERROR: Failed to create light for {name}: {e}")
+                _LOGGER.error("Failed to create light entity for %s: %s", name, e)
 
-    print(f"SBER_LIGHT: Creating {len(entities)} light entities")
+    print(f"SBER_LIGHT: Will create {len(entities)} light entities")
     _LOGGER.warning("Creating %d light entities", len(entities))
+
+    try:
+        async_add_entities(entities)
+        print(
+            f"SBER_LIGHT: Successfully called async_add_entities with {len(entities)} entities"
+        )
+    except Exception as e:
+        print(f"SBER_LIGHT ERROR: async_add_entities failed: {e}")
+        _LOGGER.error("async_add_entities failed: %s", e)
+
     print("=" * 60)
-    async_add_entities(entities)
 
 
 class SberLight(CoordinatorEntity, LightEntity):

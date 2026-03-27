@@ -59,14 +59,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Sber Smart Home sensors."""
-    print("=" * 60)
-    print("SBER_SENSOR: Starting sensor platform setup")
-
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
     devices = coordinator.get_devices()
-    print(f"SBER_SENSOR: Found {len(devices)} devices")
-    _LOGGER.warning("Sensor platform: found %d devices", len(devices))
     entities = []
 
     for device in devices:
@@ -91,17 +86,12 @@ async def async_setup_entry(
 
         for attr_key in sensor_attributes:
             if any(a.get("key") == attr_key for a in attributes):
-                print(f"SBER_SENSOR: Creating sensor {attr_key} for device {name}")
-                _LOGGER.warning("Creating sensor %s for device %s", attr_key, name)
                 entities.append(
                     SberSensor(
                         coordinator, device_id, f"{name} {attr_key}", attr_key, device
                     )
                 )
 
-    print(f"SBER_SENSOR: Creating {len(entities)} sensor entities")
-    _LOGGER.warning("Creating %d sensor entities", len(entities))
-    print("=" * 60)
     async_add_entities(entities)
 
 
