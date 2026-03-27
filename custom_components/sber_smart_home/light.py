@@ -62,7 +62,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._device = device
         self._attr_unique_id = f"sber_light_{device_id}"
         self._attr_name = name
-        self._is_on = False
+        self._is_on = None
         self._brightness = None
         self._hs_color = None
 
@@ -120,13 +120,13 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         device = self.coordinator.get_device(self._device_id)
         if not device:
-            return False
+            return None
 
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "on_off":
                 return state.get("bool_value", False)
-        return False
+        return None
 
     @property
     def brightness(self) -> int | None:
@@ -320,5 +320,6 @@ class SberLight(CoordinatorEntity, LightEntity):
         )
 
         self._is_on = False
+        self._brightness = None
         self._hs_color = None
         self.async_write_ha_state()
