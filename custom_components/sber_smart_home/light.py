@@ -243,14 +243,21 @@ class SberLight(CoordinatorEntity, LightEntity):
             ha_brightness = kwargs["brightness"]
             sber_brightness = int(ha_brightness * 1000 / 255)
             print(f"SBER: brightness={ha_brightness} -> sber={sber_brightness}")
-            state_updates.append(
-                {
-                    "key": "light_brightness",
-                    "value": sber_brightness,
-                    "attr_type": "INTEGER",
-                }
+
+            await self.coordinator.api.set_device_state(
+                self._device_id,
+                [
+                    {
+                        "key": "light_brightness",
+                        "value": sber_brightness,
+                        "attr_type": "INTEGER",
+                    }
+                ],
             )
             self._brightness = ha_brightness
+            self._is_on = True
+            self.async_write_ha_state()
+            return
 
         if "color_temp" in kwargs:
             ha_color_temp = kwargs["color_temp"]
