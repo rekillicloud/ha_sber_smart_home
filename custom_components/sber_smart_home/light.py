@@ -83,7 +83,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "light_brightness" in attribute_keys:
             color_modes.add(ColorMode.BRIGHTNESS)
         if "light_colour" in attribute_keys:
-            color_modes.add(ColorMode.COLOR)
+            color_modes.add(ColorMode.RGB)
         if "light_colour_temp" in attribute_keys:
             color_modes.add(ColorMode.COLOR_TEMP)
 
@@ -133,7 +133,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "light_colour":
-                return ColorMode.COLOR
+                return ColorMode.RGB
             elif state.get("key") == "light_colour_temp":
                 return ColorMode.COLOR_TEMP
             elif state.get("key") == "light_brightness":
@@ -186,10 +186,14 @@ class SberLight(CoordinatorEntity, LightEntity):
                 }
             )
 
-        if "color" in kwargs:
-            color = kwargs["color"]
+        if "rgb_color" in kwargs:
+            rgb_color = kwargs["rgb_color"]
             state_updates.append(
-                {"key": "light_colour", "value": color, "attr_type": "COLOR"}
+                {
+                    "key": "light_colour",
+                    "value": {"rgb": list(rgb_color)},
+                    "attr_type": "COLOR",
+                }
             )
 
         state_updates.append({"key": "on_off", "value": True, "attr_type": "BOOL"})
