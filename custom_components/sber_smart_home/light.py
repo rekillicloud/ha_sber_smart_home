@@ -252,12 +252,11 @@ class SberLight(CoordinatorEntity, LightEntity):
             await self.coordinator.api.set_device_state(
                 self._device_id,
                 [
-                    {"key": "switch_led", "value": True, "attr_type": "BOOL"},
                     {
                         "key": "light_brightness",
                         "value": sber_brightness,
                         "attr_type": "INTEGER",
-                    },
+                    }
                 ],
             )
             self._brightness = ha_brightness
