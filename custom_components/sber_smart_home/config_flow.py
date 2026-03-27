@@ -142,6 +142,12 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="authorize",
             data_schema=schema,
+            description_placeholders={"auth_url": self.auth_url},
+        )
+
+        return self.async_show_form(
+            step_id="authorize",
+            data_schema=schema,
         )
 
     async def async_step_authorize(self, user_input=None) -> ConfigFlowResult:
