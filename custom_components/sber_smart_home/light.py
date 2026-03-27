@@ -256,7 +256,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                         "key": "light_brightness",
                         "value": sber_brightness,
                         "attr_type": "INTEGER",
-                    }
+                    },
                 ],
             )
             self._brightness = ha_brightness

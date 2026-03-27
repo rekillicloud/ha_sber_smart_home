@@ -147,29 +147,18 @@ class SberSmartHomeApi:
             value = item.get("value")
             attr_type = item.get("attr_type", "BOOL")
 
-            if key == "light_brightness":
-                state_item = {"type": "brightness", "value": int(value)}
-            elif key == "switch_led" or key == "on_off":
-                state_item = {"type": "on_off", "value": bool(value)}
-            elif key == "light_colour":
-                state_item = {"type": "color_setting", "value": value}
-            elif key == "light_colour_temp":
-                state_item = {
-                    "type": "color_setting",
-                    "value": {"color_temp": int(value)},
-                }
-            else:
-                state_item = {"key": key, "type": attr_type}
-                if attr_type == "BOOL":
-                    state_item["bool_value"] = value
-                elif attr_type == "INTEGER":
-                    state_item["integer_value"] = value
-                elif attr_type == "STRING":
-                    state_item["string_value"] = str(value)
-                elif attr_type == "ENUM":
-                    state_item["enum_value"] = str(value)
-                elif attr_type == "COLOR":
-                    state_item["color_value"] = value
+            state_item = {"key": key, "type": attr_type}
+
+            if attr_type == "BOOL":
+                state_item["bool_value"] = value
+            elif attr_type == "INTEGER":
+                state_item["integer_value"] = str(value)
+            elif attr_type == "STRING":
+                state_item["string_value"] = str(value)
+            elif attr_type == "ENUM":
+                state_item["enum_value"] = str(value)
+            elif attr_type == "COLOR":
+                state_item["color_value"] = value
 
             desired_state.append(state_item)
 
