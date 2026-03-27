@@ -139,7 +139,7 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema({vol.Required("redirect_url"): str}),
-                description_placeholder={"auth_url": _AUTH_URL},
+                description_placeholders={"auth_url": _AUTH_URL},
             )
 
         redirect_url = user_input.get("redirect_url", "").strip()
