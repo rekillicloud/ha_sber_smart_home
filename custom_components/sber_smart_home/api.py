@@ -1,8 +1,10 @@
 """API client for Sber Smart Home."""
+
 import asyncio
 import logging
 import ssl
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +22,17 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create SSL context (blocking call, should be done at module level)."""
+    ctx = ssl.create_default_context()
+    ctx.check_verify_flags = ssl.CERT_NONE
+    ctx.load_verify_locations(str(DEFAULT_SSL_CERT_PATH))
+    return ctx
+
+
+_SSL_CONTEXT = _create_ssl_context()
+
+
 class SberSmartHomeApi:
     """Main API client for Sber Smart Home."""
 
@@ -28,9 +41,7 @@ class SberSmartHomeApi:
         self._session = session
         self._access_token = access_token
         self._gateway_token: str | None = None
-        self._ssl_context = ssl.create_default_context()
-        self._ssl_context.check_verify_flags = ssl.CERT_NONE
-        self._ssl_context.load_verify_locations(str(DEFAULT_SSL_CERT_PATH))
+        self._ssl_context = _SSL_CONTEXT
 
     async def _request(
         self,
@@ -60,7 +71,7 @@ class SberSmartHomeApi:
                     text = await response.text()
                     _LOGGER.error("API request failed: %s %s", response.status, text)
                     raise Exception(f"API error: {response.status}")
-                
+
                 return await response.json()
         except Exception as e:
             _LOGGER.error("Request error: %s", e)
@@ -125,7 +136,7 @@ class SberSmartHomeApi:
             raise Exception("No gateway token available")
 
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        
+
         desired_state = []
         for item in state:
             key = item.get("key")
@@ -164,7 +175,9 @@ class SberSmartHomeApi:
             device_id, [{"key": "on_off", "value": is_on, "attr_type": "BOOL"}]
         )
 
-    async def set_light_brightness(self, device_id: str, brightness: int) -> dict[str, Any]:
+    async def set_light_brightness(
+        self, device_id: str, brightness: int
+    ) -> dict[str, Any]:
         """Set light brightness."""
         return await self.set_device_state(
             device_id,
@@ -178,7 +191,9 @@ class SberSmartHomeApi:
             [{"key": "light_colour", "value": {"rgb": rgb}, "attr_type": "COLOR"}],
         )
 
-    async def set_light_color_temp(self, device_id: str, color_temp: int) -> dict[str, Any]:
+    async def set_light_color_temp(
+        self, device_id: str, color_temp: int
+    ) -> dict[str, Any]:
         """Set light color temperature."""
         return await self.set_device_state(
             device_id,

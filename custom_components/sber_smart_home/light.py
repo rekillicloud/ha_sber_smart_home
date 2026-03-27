@@ -3,7 +3,10 @@
 import logging
 from typing import Any
 
-from homeassistant.components.light import LightEntity
+from homeassistant.components.light import (
+    ColorMode,
+    LightEntity,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -73,6 +76,22 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._device = device
         self._attr_unique_id = f"sber_light_{device_id}"
 
+        attributes = device.get("attributes", [])
+        attribute_keys = [a.get("key") for a in attributes]
+
+        color_modes = set()
+        if "light_brightness" in attribute_keys:
+            color_modes.add(ColorMode.BRIGHTNESS)
+        if "light_colour" in attribute_keys:
+            color_modes.add(ColorMode.COLOR)
+        if "light_colour_temp" in attribute_keys:
+            color_modes.add(ColorMode.COLOR_TEMP)
+
+        if not color_modes:
+            color_modes.add(ColorMode.ONOFF)
+
+        self._attr_supported_color_modes = color_modes
+
     @property
     def name(self) -> str:
         """Return name."""
@@ -105,49 +124,21 @@ class SberLight(CoordinatorEntity, LightEntity):
         return None
 
     @property
-    def supported_features(self) -> int:
-        """Return supported features."""
+    def color_mode(self) -> ColorMode | None:
+        """Return color mode."""
         device = self.coordinator.get_device(self._device_id)
         if not device:
-            return 0
+            return None
 
-        features = 0
-        attributes = device.get("attributes", [])
-
-        if any(a.get("key") == "light_brightness" for a in attributes):
-            features |= 1
-        if any(a.get("key") == "light_colour" for a in attributes):
-            features |= 2
-        if any(a.get("key") == "light_colour_temp" for a in attributes):
-            features |= 4
-
-        return features
-
-    async def async_turn_on(self, **kwargs) -> None:
-        """Turn on light."""
-        if not self.coordinator.api:
-            return
-
-        state_updates = []
-
-        if "brightness" in kwargs:
-            brightness = kwargs["brightness"]
-            state_updates.append(
-                {"key": "light_brightness", "value": brightness, "attr_type": "INTEGER"}
-            )
-
-        state_updates.append({"key": "on_off", "value": True, "attr_type": "BOOL"})
-
-        await self.coordinator.api.set_device_state(self._device_id, state_updates)
-        await self.coordinator.async_request_refresh()
-
-    async def async_turn_off(self, **kwargs) -> None:
-        """Turn off light."""
-        if not self.coordinator.api:
-            return
-
-        await self.coordinator.api.set_switch_state(self._device_id, False)
-        await self.coordinator.async_request_refresh()
+        reported = device.get("reported_state", [])
+        for state in reported:
+            if state.get("key") == "light_colour":
+                return ColorMode.COLOR
+            elif state.get("key") == "light_colour_temp":
+                return ColorMode.COLOR_TEMP
+            elif state.get("key") == "light_brightness":
+                return ColorMode.BRIGHTNESS
+        return ColorMode.ONOFF
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -171,3 +162,47 @@ class SberLight(CoordinatorEntity, LightEntity):
                 attrs["mode"] = state.get("enum_value")
 
         return attrs
+
+    async def async_turn_on(self, **kwargs) -> None:
+        """Turn on light."""
+        if not self.coordinator.api:
+            return
+
+        state_updates = []
+
+        if "brightness" in kwargs:
+            brightness = kwargs["brightness"]
+            state_updates.append(
+                {"key": "light_brightness", "value": brightness, "attr_type": "INTEGER"}
+            )
+
+        if "color_temp" in kwargs:
+            color_temp = kwargs["color_temp"]
+            state_updates.append(
+                {
+                    "key": "light_colour_temp",
+                    "value": color_temp,
+                    "attr_type": "INTEGER",
+                }
+            )
+
+        if "color" in kwargs:
+            color = kwargs["color"]
+            state_updates.append(
+                {"key": "light_colour", "value": color, "attr_type": "COLOR"}
+            )
+
+        state_updates.append({"key": "on_off", "value": True, "attr_type": "BOOL"})
+
+        await self.coordinator.api.set_device_state(self._device_id, state_updates)
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn off light."""
+        if not self.coordinator.api:
+            return
+
+        await self.coordinator.api.set_device_state(
+            self._device_id, [{"key": "on_off", "value": False, "attr_type": "BOOL"}]
+        )
+        await self.coordinator.async_request_refresh()
