@@ -1,5 +1,7 @@
 """Constants for Sber Smart Home."""
+
 import ssl
+from datetime import timedelta
 from pathlib import Path
 
 DOMAIN = "sber_smart_home"
@@ -14,7 +16,7 @@ TOKEN_ENDPOINT = "https://online.sberbank.ru:4431/CSAFront/api/service/oidc/v3/t
 CLIENT_ID = "b1f0f0c6-fcb0-4ece-8374-6b614ebe3d42"
 REDIRECT_URI = "companionapp://host"
 
-SCAN_INTERVAL = 30
+SCAN_INTERVAL = timedelta(seconds=30)
 
 DEFAULT_SSL_CERT_PATH = Path(__file__).parent / "russian_trusted_root_ca.pem"
 
