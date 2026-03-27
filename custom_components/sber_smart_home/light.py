@@ -64,6 +64,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._attr_name = name
         self._is_on = False
         self._brightness = None
+        self._hs_color = None
 
         attributes = device.get("attributes", [])
         attribute_keys = [a.get("key") for a in attributes]
@@ -161,6 +162,9 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def hs_color(self) -> tuple[float, float] | None:
         """Return hue and saturation."""
+        if self._hs_color is not None:
+            return self._hs_color
+
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return None
@@ -275,6 +279,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                     "attr_type": "COLOR",
                 }
             )
+            self._hs_color = hs
             if self._has_mode:
                 state_updates.append(
                     {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
@@ -290,6 +295,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                     "attr_type": "COLOR",
                 }
             )
+            self._hs_color = (h, s)
             if self._has_mode:
                 state_updates.append(
                     {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
@@ -314,4 +320,5 @@ class SberLight(CoordinatorEntity, LightEntity):
         )
 
         self._is_on = False
+        self._hs_color = None
         self.async_write_ha_state()
