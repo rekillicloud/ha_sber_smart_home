@@ -260,7 +260,6 @@ class SberLight(CoordinatorEntity, LightEntity):
                 self._device_id,
                 [
                     {"key": "on_off", "bool_value": True},
-                    {"key": "switch_led", "bool_value": True},
                     {"key": "light_mode", "enum_value": "white"},
                     {"key": "light_brightness", "integer_value": sber_brightness},
                 ],
