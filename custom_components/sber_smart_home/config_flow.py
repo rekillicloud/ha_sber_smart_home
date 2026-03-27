@@ -142,8 +142,7 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     {
                         vol.Required(
                             "redirect_url",
-                            description="Введите URL после авторизации\n\nСсылка для авторизации: "
-                            + _AUTH_URL,
+                            description=f"Введите URL после авторизации. Ссылка: {_AUTH_URL}",
                         ): str
                     }
                 ),
