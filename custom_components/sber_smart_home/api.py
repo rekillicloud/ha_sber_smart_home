@@ -167,18 +167,35 @@ class SberSmartHomeApi:
         _LOGGER.warning(
             f"set_device_state: device_id={device_id}, state={desired_state}"
         )
-        print(f"SBER_API: device_id={device_id}, state={desired_state}")
+        print(f"SBER_API BEFORE REQUEST: device_id={device_id}")
 
-        return await self._request(
-            "PUT",
-            f"{GATEWAY_API}/devices/{device_id}/state",
-            headers={"X-AUTH-jwt": self._gateway_token},
-            json={
-                "device_id": device_id,
-                "desired_state": desired_state,
-                "timestamp": timestamp,
-            },
-        )
+        try:
+            async with self._session.request(
+                "PUT",
+                f"{GATEWAY_API}/devices/{device_id}/state",
+                headers={"X-AUTH-jwt": self._gateway_token},
+                json={
+                    "device_id": device_id,
+                    "desired_state": desired_state,
+                    "timestamp": timestamp,
+                },
+                ssl=self._ssl_context,
+            ) as response:
+                print(
+                    f"SBER_API response: status={response.status}, url={f'{GATEWAY_API}/devices/{device_id}/state'}"
+                )
+                if response.status >= 400:
+                    text = await response.text()
+                    print(f"SBER_API error: {text}")
+                    _LOGGER.error("API request failed: %s %s", response.status, text)
+                    raise Exception(f"API error: {response.status}")
+
+                result = await response.json()
+                print(f"SBER_API result: {result}")
+                return result
+        except Exception as e:
+            _LOGGER.error("Request error: %s", e)
+            raise
 
     async def set_switch_state(self, device_id: str, is_on: bool) -> dict[str, Any]:
         """Set switch on/off state."""
