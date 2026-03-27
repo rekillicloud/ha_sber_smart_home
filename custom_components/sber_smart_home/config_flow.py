@@ -9,7 +9,6 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
-from homeassistant.helpers import config_entry_flow
 
 from .const import (
     AUTH_ENDPOINT,
@@ -203,10 +202,3 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "expires_in": expires_in,
             },
         )
-
-
-config_entry_flow.register_flow_implementation(
-    DOMAIN,
-    name="Sber Smart Home",
-    description="Connect Sber Smart Home devices",
-)
