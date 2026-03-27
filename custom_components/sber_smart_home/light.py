@@ -86,6 +86,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._name = name
         self._device = device
         self._attr_unique_id = f"sber_light_{device_id}"
+        self._attr_name = name
 
         attributes = device.get("attributes", [])
         attribute_keys = [a.get("key") for a in attributes]
@@ -104,9 +105,20 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._attr_supported_color_modes = color_modes
 
     @property
-    def name(self) -> str:
-        """Return name."""
-        return self._name
+    def device_info(self) -> dict[str, Any]:
+        """Return device info."""
+        device = self.coordinator.get_device(self._device_id)
+        if not device:
+            return {}
+
+        device_info = device.get("device_info", {})
+        return {
+            "identifiers": {(DOMAIN, self._device_id)},
+            "name": self._name,
+            "manufacturer": device_info.get("manufacturer", "Sber"),
+            "model": device_info.get("model", "Smart Device"),
+            "sw_version": device_info.get("sw_version"),
+        }
 
     @property
     def is_on(self) -> bool | None:
