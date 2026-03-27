@@ -2,9 +2,9 @@
   "config": {
     "flow_title": "Sber Smart Home",
     "step": {
-      "user": {
-        "title": "Sber Smart Home",
-        "description": "## Для авторизации:\n\n1. Нажмите кнопку ниже чтобы открыть страницу авторизации Сбер ID в новой вкладке\n\n2. Авторизуйтесь в Сбер\n\n3. После авторизации скопируйте URL из адресной строки\n\n4. Вернитесь сюда и нажмите Продолжить"
+      "authorize": {
+        "title": "Sber Smart Home Authorization",
+        "description": "## For authorization:\n\n1. Open this link in browser: [Authorization]({auth_url})\n\n2. Login to Sber\n\n3. Copy the URL from address bar after redirect\n\n4. Paste it in the field below\n\n**Authorization URL:**\n```\n{auth_url}\n```"
       }
     },
     "abort": {

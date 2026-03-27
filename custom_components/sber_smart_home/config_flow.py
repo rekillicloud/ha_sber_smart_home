@@ -125,24 +125,22 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self):
         """Initialize flow."""
-        self.auth_url = None
-        self.code_verifier = None
+        self.auth_url: str | None = None
+        self.code_verifier: str | None = None
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input=None) -> ConfigFlowResult:
         """First step - show auth URL."""
         if self.auth_url is None:
             self.auth_url, self.code_verifier = _generate_auth_url()
 
-        if user_input is not None:
-            return await self.async_step_authorize()
-
         return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema({}),
+            step_id="authorize",
+            data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+            description_placeholders={"auth_url": self.auth_url},
         )
 
-    async def async_step_authorize(self, user_input=None):
-        """Second step - ask for redirect URL."""
+    async def async_step_authorize(self, user_input=None) -> ConfigFlowResult:
+        """Second step - process redirect URL."""
         if user_input is None:
             return self.async_show_form(
                 step_id="authorize",
