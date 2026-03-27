@@ -190,6 +190,7 @@ class SberSmartHomeApi:
 
                 result = await response.json()
                 _LOGGER.warning(f"SBER_API result: {result}")
+                print(f"SBER_API result: {result}")
                 return result
         except Exception as e:
             _LOGGER.error("Request error: %s", e)
