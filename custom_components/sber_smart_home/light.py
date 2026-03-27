@@ -17,8 +17,6 @@ from .coordinator import SberSmartHomeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-_DEBUG = True
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -48,68 +46,6 @@ async def async_setup_entry(
             entities.append(SberLight(coordinator, device_id, name, device))
 
     async_add_entities(entities)
-    print("SBER_LIGHT: Starting light platform setup")
-
-    coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    devices = coordinator.get_devices()
-    print(f"SBER_LIGHT: Found {len(devices)} devices")
-    _LOGGER.warning("Light platform: found %d devices", len(devices))
-    entities = []
-
-    for device in devices:
-        device_id = device.get("id")
-        device_name = device.get("name", {})
-        name = (
-            device_name.get("name", "Unknown")
-            if isinstance(device_name, dict)
-            else str(device_name)
-        )
-        device_type = device.get("device_type_name", "")
-
-        attributes = device.get("attributes", [])
-        attribute_keys = [a.get("key") for a in attributes]
-
-        has_on_off = any(a.get("key") == "on_off" for a in attributes)
-        has_brightness = any(a.get("key") == "light_brightness" for a in attributes)
-
-        model = device.get("device_info", {}).get("model", "Unknown")
-        print(
-            f"SBER_LIGHT: Device: {name}, model: {model}, has_on_off: {has_on_off}, has_brightness: {has_brightness}"
-        )
-        _LOGGER.warning(
-            "Device: %s (model: %s) attributes: %s, has_on_off: %s, has_brightness: %s",
-            name,
-            model,
-            attribute_keys,
-            has_on_off,
-            has_brightness,
-        )
-
-        if has_on_off or has_brightness:
-            print(f"SBER_LIGHT: Adding {name} as light entity")
-            _LOGGER.warning("Adding %s as light entity", name)
-            try:
-                light_entity = SberLight(coordinator, device_id, name, device)
-                entities.append(light_entity)
-                print(f"SBER_LIGHT: Created light entity for {name}")
-            except Exception as e:
-                print(f"SBER_LIGHT ERROR: Failed to create light for {name}: {e}")
-                _LOGGER.error("Failed to create light entity for %s: %s", name, e)
-
-    print(f"SBER_LIGHT: Will create {len(entities)} light entities")
-    _LOGGER.warning("Creating %d light entities", len(entities))
-
-    try:
-        async_add_entities(entities)
-        print(
-            f"SBER_LIGHT: Successfully called async_add_entities with {len(entities)} entities"
-        )
-    except Exception as e:
-        print(f"SBER_LIGHT ERROR: async_add_entities failed: {e}")
-        _LOGGER.error("async_add_entities failed: %s", e)
-
-    print("=" * 60)
 
 
 class SberLight(CoordinatorEntity, LightEntity):
@@ -127,18 +63,22 @@ class SberLight(CoordinatorEntity, LightEntity):
         attributes = device.get("attributes", [])
         attribute_keys = [a.get("key") for a in attributes]
 
-        color_modes = set()
+        has_color = "light_colour" in attribute_keys
+        has_color_temp = "light_colour_temp" in attribute_keys
+        has_brightness = "light_brightness" in attribute_keys
 
-        if "light_colour" in attribute_keys:
+        color_modes = set()
+        if has_color:
             color_modes.add(ColorMode.RGB)
-        elif "light_colour_temp" in attribute_keys:
+        elif has_color_temp:
             color_modes.add(ColorMode.COLOR_TEMP)
-        elif "light_brightness" in attribute_keys:
+        elif has_brightness:
             color_modes.add(ColorMode.BRIGHTNESS)
         else:
             color_modes.add(ColorMode.ONOFF)
 
         self._attr_supported_color_modes = color_modes
+        self._has_brightness = has_brightness
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -171,7 +111,7 @@ class SberLight(CoordinatorEntity, LightEntity):
 
     @property
     def brightness(self) -> int | None:
-        """Return brightness."""
+        """Return brightness (0-255 for HA, 0-1000 for Sber)."""
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return None
@@ -179,24 +119,19 @@ class SberLight(CoordinatorEntity, LightEntity):
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "light_brightness":
-                return int(state.get("integer_value", 0))
+                sber_brightness = int(state.get("integer_value", 0))
+                return int(sber_brightness * 255 / 1000)
         return None
 
     @property
     def color_mode(self) -> ColorMode | None:
         """Return color mode."""
-        device = self.coordinator.get_device(self._device_id)
-        if not device:
-            return None
-
-        reported = device.get("reported_state", [])
-        for state in reported:
-            if state.get("key") == "light_colour":
-                return ColorMode.RGB
-            elif state.get("key") == "light_colour_temp":
-                return ColorMode.COLOR_TEMP
-            elif state.get("key") == "light_brightness":
-                return ColorMode.BRIGHTNESS
+        if ColorMode.RGB in self._attr_supported_color_modes:
+            return ColorMode.RGB
+        elif ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
+            return ColorMode.COLOR_TEMP
+        elif ColorMode.BRIGHTNESS in self._attr_supported_color_modes:
+            return ColorMode.BRIGHTNESS
         return ColorMode.ONOFF
 
     @property
@@ -230,9 +165,14 @@ class SberLight(CoordinatorEntity, LightEntity):
         state_updates = []
 
         if "brightness" in kwargs:
-            brightness = kwargs["brightness"]
+            ha_brightness = kwargs["brightness"]
+            sber_brightness = int(ha_brightness * 1000 / 255)
             state_updates.append(
-                {"key": "light_brightness", "value": brightness, "attr_type": "INTEGER"}
+                {
+                    "key": "light_brightness",
+                    "value": sber_brightness,
+                    "attr_type": "INTEGER",
+                }
             )
 
         if "color_temp" in kwargs:
@@ -245,12 +185,13 @@ class SberLight(CoordinatorEntity, LightEntity):
                 }
             )
 
-        if "rgb_color" in kwargs:
-            rgb_color = kwargs["rgb_color"]
+        if "hs_color" in kwargs:
+            hs = kwargs["hs_color"]
+            h, s = hs[0], hs[1]
             state_updates.append(
                 {
                     "key": "light_colour",
-                    "value": {"rgb": list(rgb_color)},
+                    "value": {"h": int(h), "s": int(s * 10), "v": 1000},
                     "attr_type": "COLOR",
                 }
             )
