@@ -9,6 +9,7 @@ import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.helpers import config_entry_flow
 
 from .const import (
     AUTH_ENDPOINT,
@@ -129,7 +130,7 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.code_verifier = None
 
     async def async_step_user(self, user_input=None):
-        """First step - show auth URL and continue button."""
+        """First step - show auth URL."""
         if self.auth_url is None:
             self.auth_url, self.code_verifier = _generate_auth_url()
 
@@ -146,14 +147,7 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(
                 step_id="authorize",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Вставьте URL из адресной строки",
-                        ): str
-                    }
-                ),
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
             )
 
         redirect_url = user_input.get("redirect_url", "").strip()
@@ -209,3 +203,10 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "expires_in": expires_in,
             },
         )
+
+
+config_entry_flow.register_flow_implementation(
+    DOMAIN,
+    name="Sber Smart Home",
+    description="Connect Sber Smart Home devices",
+)
