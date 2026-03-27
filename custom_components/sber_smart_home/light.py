@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.color import color_hs_to_RGB, color_RGB_to_hs
 
 from .const import DOMAIN
 from .coordinator import SberSmartHomeCoordinator
@@ -158,6 +159,32 @@ class SberLight(CoordinatorEntity, LightEntity):
         return None
 
     @property
+    def hs_color(self) -> tuple[float, float] | None:
+        """Return hue and saturation."""
+        device = self.coordinator.get_device(self._device_id)
+        if not device:
+            return None
+
+        reported = device.get("reported_state", [])
+        for state in reported:
+            if state.get("key") == "light_colour":
+                color_value = state.get("color_value")
+                if color_value:
+                    h = color_value.get("h", 0)
+                    s = color_value.get("s", 0)
+                    return (float(h), float(s) / 10.0)
+        return None
+
+    @property
+    def rgb_color(self) -> tuple[int, int, int] | None:
+        """Return rgb color."""
+        hs = self.hs_color
+        if hs is None:
+            return None
+
+        return tuple(int(v) for v in color_hs_to_RGB(hs[0], hs[1]))
+
+    @property
     def color_mode(self) -> ColorMode | None:
         """Return current color mode."""
         device = self.coordinator.get_device(self._device_id)
@@ -241,6 +268,21 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "hs_color" in kwargs:
             hs = kwargs["hs_color"]
             h, s = hs[0], hs[1]
+            state_updates.append(
+                {
+                    "key": "light_colour",
+                    "value": {"h": int(h), "s": int(s * 10), "v": 1000},
+                    "attr_type": "COLOR",
+                }
+            )
+            if self._has_mode:
+                state_updates.append(
+                    {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
+                )
+
+        if "rgb_color" in kwargs:
+            rgb = kwargs["rgb_color"]
+            h, s = color_RGB_to_hs(rgb[0], rgb[1], rgb[2])
             state_updates.append(
                 {
                     "key": "light_colour",
