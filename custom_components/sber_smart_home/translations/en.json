@@ -4,20 +4,17 @@
     "step": {
       "user": {
         "title": "Sber Smart Home",
-        "description": "## Для авторизации:\n\n**Ссылка для авторизации (скопируйте и откройте в браузере):**\n\n`https://online.sberbank.ru/CSAFront/oidc/authorize.do?response_type=code&client_id=b1f0f0c6-fcb0-4ece-8374-6b614ebe3d42&redirect_uri=companionapp%3A%2F%2Fhost&scope=openid&code_challenge=...&code_challenge_method=S256&state=...`\n\nПосле авторизации вставьте URL из адресной строки (будет начинаться с `companionapp://`)",
-        "data": {
-          "redirect_url": "URL после авторизации"
-        }
+        "description": "## Для авторизации:\n\n1. Нажмите кнопку ниже чтобы открыть страницу авторизации Сбер ID в новой вкладке\n\n2. Авторизуйтесь в Сбер\n\n3. После авторизации скопируйте URL из адресной строки\n\n4. Вернитесь сюда и нажмите Продолжить"
       }
     },
     "abort": {
       "already_configured": "Already configured"
     },
     "error": {
-      "invalid_code": "Invalid code from URL",
-      "missing_url": "Вставьте URL из адресной строки",
-      "invalid_url": "URL должен содержать code=",
-      "gateway_token_error": "Failed to get gateway token",
+      "invalid_code": "Invalid code",
+      "missing_url": "Paste URL",
+      "invalid_url": "Invalid URL",
+      "gateway_token_error": "Gateway error",
       "connection_error": "Connection error"
     }
   }

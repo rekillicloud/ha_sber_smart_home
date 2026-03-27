@@ -139,14 +139,6 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({}),
-            description=(
-                f"## Для авторизации:\n\n"
-                f"1. **Откройте ссылку и авторизуйтесь в Сбер:**\n\n"
-                f"[{self.auth_url}]({self.auth_url})\n\n"
-                f"2. После авторизации вы будете перенаправлены на страницу с ошибкой (это нормально)\n\n"
-                f"3. Скопируйте полный URL из адресной строки браузера\n\n"
-                f"4. Нажмите 'Продолжить' и вставьте этот URL"
-            ),
         )
 
     async def async_step_authorize(self, user_input=None):
@@ -154,7 +146,14 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(
                 step_id="authorize",
-                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(
+                            "redirect_url",
+                            description="Вставьте URL из адресной строки",
+                        ): str
+                    }
+                ),
             )
 
         redirect_url = user_input.get("redirect_url", "").strip()
