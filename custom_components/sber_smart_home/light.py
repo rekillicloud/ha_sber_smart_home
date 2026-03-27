@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant.components.light import (
     ColorMode,
     LightEntity,
+    LightEntityFeature,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -76,7 +77,7 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         color_modes = set()
         if has_color:
-            color_modes.add(ColorMode.RGB)
+            color_modes.add(ColorMode.HS)
             if has_color_temp:
                 color_modes.add(ColorMode.COLOR_TEMP)
         elif has_color_temp:
@@ -87,6 +88,10 @@ class SberLight(CoordinatorEntity, LightEntity):
             color_modes.add(ColorMode.ONOFF)
 
         self._attr_supported_color_modes = color_modes
+
+        self._supports_color = has_color
+        self._supports_color_temp = has_color_temp
+        self._supports_brightness = has_brightness
         self._has_brightness = has_brightness
         self._has_mode = "light_mode" in attribute_keys
 
@@ -143,7 +148,7 @@ class SberLight(CoordinatorEntity, LightEntity):
         if not device:
             return None
 
-        if self.color_mode == ColorMode.RGB:
+        if self.color_mode == ColorMode.HS:
             desired = device.get("desired_state", [])
             for state in desired:
                 if state.get("key") == "light_colour":
@@ -231,7 +236,7 @@ class SberLight(CoordinatorEntity, LightEntity):
     def color_mode(self) -> ColorMode | None:
         """Return current color mode."""
         if self._hs_color is not None:
-            return ColorMode.RGB
+            return ColorMode.HS
 
         device = self.coordinator.get_device(self._device_id)
         if device and self._has_mode:
@@ -240,7 +245,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                 if state.get("key") == "light_mode":
                     mode = state.get("enum_value", "")
                     if mode == "colour":
-                        return ColorMode.RGB
+                        return ColorMode.HS
                     elif mode == "white":
                         return ColorMode.COLOR_TEMP
             reported = device.get("reported_state", [])
@@ -248,12 +253,12 @@ class SberLight(CoordinatorEntity, LightEntity):
                 if state.get("key") == "light_mode":
                     mode = state.get("enum_value", "")
                     if mode == "colour":
-                        return ColorMode.RGB
+                        return ColorMode.HS
                     elif mode == "white":
                         return ColorMode.COLOR_TEMP
 
-        if ColorMode.RGB in self._attr_supported_color_modes:
-            return ColorMode.RGB
+        if ColorMode.HS in self._attr_supported_color_modes:
+            return ColorMode.HS
         elif ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
             return ColorMode.COLOR_TEMP
         elif ColorMode.BRIGHTNESS in self._attr_supported_color_modes:
@@ -328,7 +333,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                 f"SBER BRIGHTNESS: ha={ha_brightness}, sber={sber_brightness}, mode={self.color_mode}"
             )
 
-            if self.color_mode == ColorMode.RGB:
+            if self.color_mode == ColorMode.HS:
                 current_color = self._get_current_color()
                 if current_color:
                     h = current_color.get("h", 0)
