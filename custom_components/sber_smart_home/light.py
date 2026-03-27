@@ -131,6 +131,9 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def brightness(self) -> int | None:
         """Return brightness (0-255 for HA, 0-1000 for Sber)."""
+        if self._brightness is not None:
+            return self._brightness
+
         device = self.coordinator.get_device(self._device_id)
         if device:
             reported = device.get("reported_state", [])
@@ -138,9 +141,6 @@ class SberLight(CoordinatorEntity, LightEntity):
                 if state.get("key") == "light_brightness":
                     sber_brightness = int(state.get("integer_value", 0))
                     return int(sber_brightness * 255 / 1000)
-
-        if self._brightness is not None:
-            return self._brightness
 
         return None
 
@@ -239,7 +239,6 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         state_updates = []
 
-        new_brightness = None
         if "brightness" in kwargs:
             ha_brightness = kwargs["brightness"]
             sber_brightness = int(ha_brightness * 1000 / 255)
@@ -250,7 +249,7 @@ class SberLight(CoordinatorEntity, LightEntity):
                     "attr_type": "INTEGER",
                 }
             )
-            new_brightness = ha_brightness
+            self._brightness = ha_brightness
 
         if "color_temp" in kwargs:
             ha_color_temp = kwargs["color_temp"]
@@ -305,8 +304,6 @@ class SberLight(CoordinatorEntity, LightEntity):
         await self.coordinator.api.set_device_state(self._device_id, state_updates)
 
         self._is_on = True
-        if new_brightness is not None:
-            self._brightness = new_brightness
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
