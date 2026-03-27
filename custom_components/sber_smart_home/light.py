@@ -244,6 +244,9 @@ class SberLight(CoordinatorEntity, LightEntity):
             ha_brightness = kwargs["brightness"]
             sber_brightness = int(ha_brightness * 950 / 255 + 50)
             sber_brightness = max(50, min(1000, sber_brightness))
+            _LOGGER.warning(
+                f"SBER BRIGHTNESS: ha={ha_brightness}, sber={sber_brightness}"
+            )
             print(f"SBER: brightness={ha_brightness} -> sber={sber_brightness}")
 
             await self.coordinator.api.set_device_state(
