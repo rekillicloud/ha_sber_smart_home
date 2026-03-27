@@ -67,12 +67,16 @@ class SberSmartHomeApi:
                 params=params,
                 ssl=self._ssl_context,
             ) as response:
+                print(f"SBER_API response: status={response.status}, url={url}")
                 if response.status >= 400:
                     text = await response.text()
+                    print(f"SBER_API error: {text}")
                     _LOGGER.error("API request failed: %s %s", response.status, text)
                     raise Exception(f"API error: {response.status}")
 
-                return await response.json()
+                result = await response.json()
+                print(f"SBER_API result: {result}")
+                return result
         except Exception as e:
             _LOGGER.error("Request error: %s", e)
             raise
