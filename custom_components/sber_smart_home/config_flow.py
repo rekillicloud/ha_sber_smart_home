@@ -21,9 +21,6 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_AUTH_URL = None
-_CODE_VERIFIER = None
-
 
 def _generate_auth_url() -> tuple[str, str]:
     """Generate auth URL with PKCE."""
@@ -128,73 +125,64 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self):
         """Initialize flow."""
-        global _AUTH_URL, _CODE_VERIFIER
-        if _AUTH_URL is None:
-            _AUTH_URL, _CODE_VERIFIER = _generate_auth_url()
+        self.auth_url = None
+        self.code_verifier = None
 
     async def async_step_user(self, user_input=None):
-        """Initial step - show auth URL and ask for redirect URL."""
+        """First step - show auth URL and continue button."""
+        if self.auth_url is None:
+            self.auth_url, self.code_verifier = _generate_auth_url()
 
+        if user_input is not None:
+            return await self.async_step_authorize()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema({}),
+            description=(
+                f"## Для авторизации:\n\n"
+                f"1. **Откройте ссылку и авторизуйтесь в Сбер:**\n\n"
+                f"[{self.auth_url}]({self.auth_url})\n\n"
+                f"2. После авторизации вы будете перенаправлены на страницу с ошибкой (это нормально)\n\n"
+                f"3. Скопируйте полный URL из адресной строки браузера\n\n"
+                f"4. Нажмите 'Продолжить' и вставьте этот URL"
+            ),
+        )
+
+    async def async_step_authorize(self, user_input=None):
+        """Second step - ask for redirect URL."""
         if user_input is None:
             return self.async_show_form(
-                step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description=f"Введите URL после авторизации. Ссылка: {_AUTH_URL}",
-                        ): str
-                    }
-                ),
+                step_id="authorize",
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
             )
 
         redirect_url = user_input.get("redirect_url", "").strip()
 
         if not redirect_url:
             return self.async_show_form(
-                step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Вставьте ссылку из адресной строки",
-                        ): str,
-                    }
-                ),
+                step_id="authorize",
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
                 errors={"redirect_url": "missing_url"},
             )
 
         match = re.search(r"code=([A-F0-9-]+)", redirect_url)
         if not match:
             return self.async_show_form(
-                step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Ссылка должна содержать code=",
-                        ): str,
-                    }
-                ),
+                step_id="authorize",
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
                 errors={"redirect_url": "invalid_url"},
             )
 
         code = match.group(1)
         _LOGGER.info("Exchanging code for token...")
 
-        token_data = await exchange_code_for_token(code, _CODE_VERIFIER)
+        token_data = await exchange_code_for_token(code, self.code_verifier)
 
         if not token_data:
             return self.async_show_form(
-                step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Неверный код. Попробуйте снова.",
-                        ): str,
-                    }
-                ),
+                step_id="authorize",
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
                 errors={"redirect_url": "invalid_code"},
             )
 
@@ -208,15 +196,8 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if not gateway_token:
             return self.async_show_form(
-                step_id="user",
-                data_schema=vol.Schema(
-                    {
-                        vol.Required(
-                            "redirect_url",
-                            description="Не удалось получить токен шлюза",
-                        ): str,
-                    }
-                ),
+                step_id="authorize",
+                data_schema=vol.Schema({vol.Required("redirect_url"): str}),
                 errors={"redirect_url": "gateway_token_error"},
             )
 

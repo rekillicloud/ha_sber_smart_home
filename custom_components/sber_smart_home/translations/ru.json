@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Sber Smart Home",
-        "description": "## Для авторизации:\n\n1. Откройте ссылку для авторизации в Сбер ID\n\n2. Авторизуйтесь в Сбер\n\n3. Скопируйте полный URL из адресной строки после перенаправления (будет начинаться с `companionapp://`) и вставьте ниже",
+        "description": "## Для авторизации:\n\n**Ссылка для авторизации (скопируйте и откройте в браузере):**\n\n`https://online.sberbank.ru/CSAFront/oidc/authorize.do?response_type=code&client_id=b1f0f0c6-fcb0-4ece-8374-6b614ebe3d42&redirect_uri=companionapp%3A%2F%2Fhost&scope=openid&code_challenge=...&code_challenge_method=S256&state=...`\n\nПосле авторизации вставьте URL из адресной строки (будет начинаться с `companionapp://`)",
         "data": {
           "redirect_url": "URL после авторизации"
         }
