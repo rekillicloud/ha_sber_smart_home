@@ -40,6 +40,8 @@ def _generate_auth_url() -> tuple[str, str]:
         .replace("/", "_")
     )
 
+    nonce = uuid.uuid4().hex
+
     auth_url = (
         f"{AUTH_ENDPOINT}"
         f"?response_type=code"
@@ -49,6 +51,7 @@ def _generate_auth_url() -> tuple[str, str]:
         f"&code_challenge={code_challenge}"
         f"&code_challenge_method=S256"
         f"&state={uuid.uuid4().hex}"
+        f"&nonce={nonce}"
     )
 
     return auth_url, code_verifier
