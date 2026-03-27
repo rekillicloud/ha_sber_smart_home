@@ -131,18 +131,17 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def brightness(self) -> int | None:
         """Return brightness (0-255 for HA, 0-1000 for Sber)."""
+        device = self.coordinator.get_device(self._device_id)
+        if device:
+            reported = device.get("reported_state", [])
+            for state in reported:
+                if state.get("key") == "light_brightness":
+                    sber_brightness = int(state.get("integer_value", 0))
+                    return int(sber_brightness * 255 / 1000)
+
         if self._brightness is not None:
             return self._brightness
 
-        device = self.coordinator.get_device(self._device_id)
-        if not device:
-            return None
-
-        reported = device.get("reported_state", [])
-        for state in reported:
-            if state.get("key") == "light_brightness":
-                sber_brightness = int(state.get("integer_value", 0))
-                return int(sber_brightness * 255 / 1000)
         return None
 
     @property
