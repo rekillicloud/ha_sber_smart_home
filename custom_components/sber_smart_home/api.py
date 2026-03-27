@@ -148,7 +148,9 @@ class SberSmartHomeApi:
             if attr_type == "BOOL":
                 state_item["bool_value"] = value
             elif attr_type == "INTEGER":
-                state_item["integer_value"] = str(value)
+                state_item["integer_value"] = (
+                    int(value) if not isinstance(value, int) else value
+                )
             elif attr_type == "STRING":
                 state_item["string_value"] = str(value)
             elif attr_type == "ENUM":
