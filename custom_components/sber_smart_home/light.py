@@ -74,6 +74,8 @@ class SberLight(CoordinatorEntity, LightEntity):
         color_modes = set()
         if has_color:
             color_modes.add(ColorMode.RGB)
+            if has_color_temp:
+                color_modes.add(ColorMode.COLOR_TEMP)
         elif has_color_temp:
             color_modes.add(ColorMode.COLOR_TEMP)
         elif has_brightness:
@@ -83,6 +85,11 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         self._attr_supported_color_modes = color_modes
         self._has_brightness = has_brightness
+        self._has_mode = "light_mode" in attribute_keys
+
+        if ColorMode.COLOR_TEMP in color_modes:
+            self._attr_min_mireds = 153
+            self._attr_max_mireds = 500
 
     @property
     def device_info(self) -> dict[str, Any]:
@@ -128,8 +135,33 @@ class SberLight(CoordinatorEntity, LightEntity):
         return self._brightness
 
     @property
+    def color_temp(self) -> int | None:
+        """Return color temperature in mireds."""
+        device = self.coordinator.get_device(self._device_id)
+        if not device:
+            return None
+
+        reported = device.get("reported_state", [])
+        for state in reported:
+            if state.get("key") == "light_colour_temp":
+                sber_temp = int(state.get("integer_value", 0))
+                return int(sber_temp * 347 / 1000 + 153)
+        return None
+
+    @property
     def color_mode(self) -> ColorMode | None:
-        """Return color mode."""
+        """Return current color mode."""
+        device = self.coordinator.get_device(self._device_id)
+        if device and self._has_mode:
+            reported = device.get("reported_state", [])
+            for state in reported:
+                if state.get("key") == "light_mode":
+                    mode = state.get("enum_value", "")
+                    if mode == "colour":
+                        return ColorMode.RGB
+                    elif mode == "white":
+                        return ColorMode.COLOR_TEMP
+
         if ColorMode.RGB in self._attr_supported_color_modes:
             return ColorMode.RGB
         elif ColorMode.COLOR_TEMP in self._attr_supported_color_modes:
@@ -182,14 +214,20 @@ class SberLight(CoordinatorEntity, LightEntity):
             new_brightness = ha_brightness
 
         if "color_temp" in kwargs:
-            color_temp = kwargs["color_temp"]
+            ha_color_temp = kwargs["color_temp"]
+            sber_color_temp = int((ha_color_temp - 153) * 1000 / 347)
+            sber_color_temp = max(0, min(1000, sber_color_temp))
             state_updates.append(
                 {
                     "key": "light_colour_temp",
-                    "value": color_temp,
+                    "value": sber_color_temp,
                     "attr_type": "INTEGER",
                 }
             )
+            if self._has_mode:
+                state_updates.append(
+                    {"key": "light_mode", "value": "white", "attr_type": "ENUM"}
+                )
 
         if "hs_color" in kwargs:
             hs = kwargs["hs_color"]
@@ -201,6 +239,10 @@ class SberLight(CoordinatorEntity, LightEntity):
                     "attr_type": "COLOR",
                 }
             )
+            if self._has_mode:
+                state_updates.append(
+                    {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
+                )
 
         state_updates.append({"key": "on_off", "value": True, "attr_type": "BOOL"})
 
