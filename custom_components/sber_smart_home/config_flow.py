@@ -135,7 +135,7 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Initial step - show auth URL and ask for redirect URL."""
 
-if user_input is None:
+        if user_input is None:
             return self.async_show_form(
                 step_id="user",
                 data_schema=vol.Schema(
