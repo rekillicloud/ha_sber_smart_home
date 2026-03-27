@@ -199,6 +199,9 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def color_mode(self) -> ColorMode | None:
         """Return current color mode."""
+        if self._hs_color is not None:
+            return ColorMode.RGB
+
         device = self.coordinator.get_device(self._device_id)
         if device and self._has_mode:
             desired = device.get("desired_state", [])
@@ -300,37 +303,49 @@ class SberLight(CoordinatorEntity, LightEntity):
                     h = current_color.get("h", 0)
                     s = current_color.get("s", 0)
                     v = sber_brightness
+                    state_updates = [
+                        {"key": "on_off", "bool_value": True},
+                        {"key": "light_mode", "enum_value": "colour"},
+                        {
+                            "key": "light_colour",
+                            "color_value": {"h": h, "s": s, "v": v},
+                        },
+                    ]
                     await self.coordinator.api.set_device_state(
                         self._device_id,
-                        [
-                            {"key": "on_off", "bool_value": True},
-                            {"key": "light_mode", "enum_value": "colour"},
-                            {
-                                "key": "light_colour",
-                                "color_value": {"h": h, "s": s, "v": v},
-                            },
-                        ],
+                        state_updates,
+                    )
+                    self.coordinator.async_patch_device_state(
+                        self._device_id, state_updates
                     )
                 else:
-                    await self.coordinator.api.set_device_state(
-                        self._device_id,
-                        [
-                            {"key": "on_off", "bool_value": True},
-                            {"key": "light_mode", "enum_value": "white"},
-                            {
-                                "key": "light_brightness",
-                                "integer_value": sber_brightness,
-                            },
-                        ],
-                    )
-            else:
-                await self.coordinator.api.set_device_state(
-                    self._device_id,
-                    [
+                    state_updates = [
                         {"key": "on_off", "bool_value": True},
                         {"key": "light_mode", "enum_value": "white"},
-                        {"key": "light_brightness", "integer_value": sber_brightness},
-                    ],
+                        {
+                            "key": "light_brightness",
+                            "integer_value": sber_brightness,
+                        },
+                    ]
+                    await self.coordinator.api.set_device_state(
+                        self._device_id,
+                        state_updates,
+                    )
+                    self.coordinator.async_patch_device_state(
+                        self._device_id, state_updates
+                    )
+            else:
+                state_updates = [
+                    {"key": "on_off", "bool_value": True},
+                    {"key": "light_mode", "enum_value": "white"},
+                    {"key": "light_brightness", "integer_value": sber_brightness},
+                ]
+                await self.coordinator.api.set_device_state(
+                    self._device_id,
+                    state_updates,
+                )
+                self.coordinator.async_patch_device_state(
+                    self._device_id, state_updates
                 )
             self._brightness = ha_brightness
             self._is_on = True
@@ -344,14 +359,11 @@ class SberLight(CoordinatorEntity, LightEntity):
             state_updates.append(
                 {
                     "key": "light_colour_temp",
-                    "value": sber_color_temp,
-                    "attr_type": "INTEGER",
+                    "integer_value": sber_color_temp,
                 }
             )
             if self._has_mode:
-                state_updates.append(
-                    {"key": "light_mode", "value": "white", "attr_type": "ENUM"}
-                )
+                state_updates.append({"key": "light_mode", "enum_value": "white"})
 
         if "hs_color" in kwargs:
             hs = kwargs["hs_color"]
@@ -359,15 +371,12 @@ class SberLight(CoordinatorEntity, LightEntity):
             state_updates.append(
                 {
                     "key": "light_colour",
-                    "value": {"h": int(h), "s": int(s * 10), "v": 1000},
-                    "attr_type": "COLOR",
+                    "color_value": {"h": int(h), "s": int(s * 10), "v": 1000},
                 }
             )
             self._hs_color = hs
             if self._has_mode:
-                state_updates.append(
-                    {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
-                )
+                state_updates.append({"key": "light_mode", "enum_value": "colour"})
 
         if "rgb_color" in kwargs:
             rgb = kwargs["rgb_color"]
@@ -375,19 +384,18 @@ class SberLight(CoordinatorEntity, LightEntity):
             state_updates.append(
                 {
                     "key": "light_colour",
-                    "value": {"h": int(h), "s": int(s * 10), "v": 1000},
-                    "attr_type": "COLOR",
+                    "color_value": {"h": int(h), "s": int(s * 10), "v": 1000},
                 }
             )
             self._hs_color = (h, s)
             if self._has_mode:
-                state_updates.append(
-                    {"key": "light_mode", "value": "colour", "attr_type": "ENUM"}
-                )
+                state_updates.append({"key": "light_mode", "enum_value": "colour"})
 
-        state_updates.append({"key": "switch_led", "value": True, "attr_type": "BOOL"})
+        if "on_off" not in [s.get("key") for s in state_updates]:
+            state_updates.append({"key": "on_off", "bool_value": True})
 
         await self.coordinator.api.set_device_state(self._device_id, state_updates)
+        self.coordinator.async_patch_device_state(self._device_id, state_updates)
 
         self._is_on = True
         self.async_write_ha_state()
@@ -397,10 +405,12 @@ class SberLight(CoordinatorEntity, LightEntity):
         if not self.coordinator.api:
             return
 
+        state_updates = [{"key": "on_off", "bool_value": False}]
         await self.coordinator.api.set_device_state(
             self._device_id,
-            [{"key": "switch_led", "value": False, "attr_type": "BOOL"}],
+            state_updates,
         )
+        self.coordinator.async_patch_device_state(self._device_id, state_updates)
 
         self._is_on = False
         self._brightness = None

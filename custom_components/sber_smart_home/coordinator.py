@@ -79,3 +79,24 @@ class SberSmartHomeCoordinator(DataUpdateCoordinator):
             if device.get("id") == device_id:
                 return device
         return None
+
+    def async_patch_device_state(self, device_id: str, states: list[dict]) -> None:
+        """Update device state optimistically."""
+        if not self.data or "result" not in self.data:
+            return
+        devices = self.data.get("result", {}).get("devices", [])
+        for device in devices:
+            if device.get("id") == device_id:
+                desired = device.get("desired_state", [])
+                for state in states:
+                    key = state.get("key")
+                    found = False
+                    for i, d in enumerate(desired):
+                        if d.get("key") == key:
+                            desired[i].update(state)
+                            found = True
+                            break
+                    if not found:
+                        desired.append(state)
+                self.async_set_updated_data(self.data)
+                break
