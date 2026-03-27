@@ -241,6 +241,36 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         return attrs
 
+    def _get_current_light_mode(self) -> str | None:
+        """Get current light mode from device state."""
+        device = self.coordinator.get_device(self._device_id)
+        if not device:
+            return None
+        desired = device.get("desired_state", [])
+        for state in desired:
+            if state.get("key") == "light_mode":
+                return state.get("enum_value")
+        reported = device.get("reported_state", [])
+        for state in reported:
+            if state.get("key") == "light_mode":
+                return state.get("enum_value")
+        return None
+
+    def _get_current_color(self) -> dict | None:
+        """Get current color from device state."""
+        device = self.coordinator.get_device(self._device_id)
+        if not device:
+            return None
+        desired = device.get("desired_state", [])
+        for state in desired:
+            if state.get("key") == "light_colour":
+                return state.get("color_value")
+        reported = device.get("reported_state", [])
+        for state in reported:
+            if state.get("key") == "light_colour":
+                return state.get("color_value")
+        return None
+
     async def async_turn_on(self, **kwargs) -> None:
         """Turn on light."""
         if not self.coordinator.api:
@@ -256,14 +286,33 @@ class SberLight(CoordinatorEntity, LightEntity):
                 f"SBER BRIGHTNESS: ha={ha_brightness}, sber={sber_brightness}, type={type(sber_brightness)}"
             )
 
-            await self.coordinator.api.set_device_state(
-                self._device_id,
-                [
-                    {"key": "on_off", "bool_value": True},
-                    {"key": "light_mode", "enum_value": "white"},
-                    {"key": "light_brightness", "integer_value": sber_brightness},
-                ],
-            )
+            current_mode = self._get_current_light_mode()
+            current_color = self._get_current_color()
+
+            if current_mode == "colour" and current_color:
+                h = current_color.get("h", 0)
+                s = current_color.get("s", 0)
+                v = sber_brightness
+                await self.coordinator.api.set_device_state(
+                    self._device_id,
+                    [
+                        {"key": "on_off", "bool_value": True},
+                        {"key": "light_mode", "enum_value": "colour"},
+                        {
+                            "key": "light_colour",
+                            "color_value": {"h": h, "s": s, "v": v},
+                        },
+                    ],
+                )
+            else:
+                await self.coordinator.api.set_device_state(
+                    self._device_id,
+                    [
+                        {"key": "on_off", "bool_value": True},
+                        {"key": "light_mode", "enum_value": "white"},
+                        {"key": "light_brightness", "integer_value": sber_brightness},
+                    ],
+                )
             self._brightness = ha_brightness
             self._is_on = True
             self.async_write_ha_state()
