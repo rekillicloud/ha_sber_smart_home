@@ -91,6 +91,9 @@ class SberLight(CoordinatorEntity, LightEntity):
             self._attr_min_mireds = 153
             self._attr_max_mireds = 500
 
+        self._optimistic_state = {}
+        self._last_command_time = None
+
     @property
     def device_info(self) -> dict[str, Any]:
         """Return device info."""
@@ -110,29 +113,35 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def is_on(self) -> bool | None:
         """Return True if light is on."""
+        if self._is_on is not None:
+            return self._is_on
+
         device = self.coordinator.get_device(self._device_id)
         if not device:
-            return self._is_on
+            return False
 
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "on_off":
                 return state.get("bool_value", False)
-        return self._is_on
+        return False
 
     @property
     def brightness(self) -> int | None:
         """Return brightness (0-255 for HA, 0-1000 for Sber)."""
+        if self._brightness is not None:
+            return self._brightness
+
         device = self.coordinator.get_device(self._device_id)
         if not device:
-            return self._brightness
+            return None
 
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "light_brightness":
                 sber_brightness = int(state.get("integer_value", 0))
                 return int(sber_brightness * 255 / 1000)
-        return self._brightness
+        return None
 
     @property
     def color_temp(self) -> int | None:
@@ -253,8 +262,6 @@ class SberLight(CoordinatorEntity, LightEntity):
             self._brightness = new_brightness
         self.async_write_ha_state()
 
-        await self.coordinator.async_request_refresh()
-
     async def async_turn_off(self, **kwargs) -> None:
         """Turn off light."""
         if not self.coordinator.api:
@@ -266,5 +273,3 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         self._is_on = False
         self.async_write_ha_state()
-
-        await self.coordinator.async_request_refresh()
