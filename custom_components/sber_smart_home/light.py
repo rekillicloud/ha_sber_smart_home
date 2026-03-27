@@ -130,7 +130,7 @@ class SberLight(CoordinatorEntity, LightEntity):
 
     @property
     def brightness(self) -> int | None:
-        """Return brightness (0-255 for HA, 0-1000 for Sber)."""
+        """Return brightness (0-255 for HA, 50-1000 for Sber)."""
         if self._brightness is not None:
             return self._brightness
 
@@ -139,8 +139,9 @@ class SberLight(CoordinatorEntity, LightEntity):
             reported = device.get("reported_state", [])
             for state in reported:
                 if state.get("key") == "light_brightness":
-                    sber_brightness = int(state.get("integer_value", 0))
-                    return int(sber_brightness * 255 / 1000)
+                    sber_brightness = int(state.get("integer_value", 50))
+                    ha_brightness = int((sber_brightness - 50) * 255 / 950)
+                    return max(0, min(255, ha_brightness))
 
         return None
 
@@ -241,17 +242,19 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         if "brightness" in kwargs:
             ha_brightness = kwargs["brightness"]
-            sber_brightness = int(ha_brightness * 1000 / 255)
+            sber_brightness = int(ha_brightness * 950 / 255 + 50)
+            sber_brightness = max(50, min(1000, sber_brightness))
             print(f"SBER: brightness={ha_brightness} -> sber={sber_brightness}")
 
             await self.coordinator.api.set_device_state(
                 self._device_id,
                 [
+                    {"key": "on_off", "value": True, "attr_type": "BOOL"},
                     {
                         "key": "light_brightness",
                         "value": sber_brightness,
                         "attr_type": "INTEGER",
-                    }
+                    },
                 ],
             )
             self._brightness = ha_brightness
