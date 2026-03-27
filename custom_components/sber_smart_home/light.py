@@ -1,5 +1,6 @@
 """Light platform for Sber Smart Home."""
 
+import asyncio
 import logging
 from typing import Any
 
@@ -247,17 +248,15 @@ class SberLight(CoordinatorEntity, LightEntity):
             _LOGGER.warning(
                 f"SBER BRIGHTNESS: ha={ha_brightness}, sber={sber_brightness}"
             )
-            print(f"SBER: brightness={ha_brightness} -> sber={sber_brightness}")
 
             await self.coordinator.api.set_device_state(
                 self._device_id,
                 [
-                    {"key": "on_off", "value": True, "attr_type": "BOOL"},
                     {
                         "key": "light_brightness",
                         "value": sber_brightness,
                         "attr_type": "INTEGER",
-                    },
+                    }
                 ],
             )
             self._brightness = ha_brightness
