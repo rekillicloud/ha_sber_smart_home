@@ -123,6 +123,10 @@ class SberLight(CoordinatorEntity, LightEntity):
         if not device:
             return None
 
+        desired = device.get("desired_state", [])
+        for state in desired:
+            if state.get("key") == "on_off":
+                return state.get("bool_value", False)
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "switch_led":
@@ -136,16 +140,34 @@ class SberLight(CoordinatorEntity, LightEntity):
             return self._brightness
 
         device = self.coordinator.get_device(self._device_id)
-        if device:
+        if not device:
+            return None
+
+        if self.color_mode == ColorMode.RGB:
+            desired = device.get("desired_state", [])
+            for state in desired:
+                if state.get("key") == "light_colour":
+                    color_value = state.get("color_value")
+                    if color_value and "v" in color_value:
+                        v = int(color_value.get("v", 1000))
+                        return int((v - 50) * 255 / 950)
             reported = device.get("reported_state", [])
             for state in reported:
-                if state.get("key") == "light_brightness":
-                    sber_brightness = int(state.get("integer_value", 50))
-                    ha_brightness = int((sber_brightness - 50) * 255 / 950)
-                    return max(0, min(255, ha_brightness))
+                if state.get("key") == "light_colour":
+                    color_value = state.get("color_value")
+                    if color_value and "v" in color_value:
+                        v = int(color_value.get("v", 1000))
+                        return int((v - 50) * 255 / 950)
 
         desired = device.get("desired_state", [])
         for state in desired:
+            if state.get("key") == "light_brightness":
+                sber_brightness = int(state.get("integer_value", 50))
+                ha_brightness = int((sber_brightness - 50) * 255 / 950)
+                return max(0, min(255, ha_brightness))
+
+        reported = device.get("reported_state", [])
+        for state in reported:
             if state.get("key") == "light_brightness":
                 sber_brightness = int(state.get("integer_value", 50))
                 ha_brightness = int((sber_brightness - 50) * 255 / 950)
@@ -176,6 +198,15 @@ class SberLight(CoordinatorEntity, LightEntity):
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return None
+
+        desired = device.get("desired_state", [])
+        for state in desired:
+            if state.get("key") == "light_colour":
+                color_value = state.get("color_value")
+                if color_value:
+                    h = color_value.get("h", 0)
+                    s = color_value.get("s", 0)
+                    return (float(h), float(s) / 10.0)
 
         reported = device.get("reported_state", [])
         for state in reported:
