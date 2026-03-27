@@ -1,4 +1,5 @@
 """Switch platform for Sber Smart Home."""
+
 import logging
 from typing import Any
 
@@ -13,6 +14,9 @@ from .coordinator import SberSmartHomeCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+SWITCH_TYPES = ("dt_socket_sber", "socket", "plug")
+LIGHT_TYPES = ("bulb", "ledstrip", "night_lamp", "cat_ledstrip_m", "cat_bulb_m")
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -21,32 +25,24 @@ async def async_setup_entry(
 ) -> None:
     """Set up Sber Smart Home switches."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
-    
+
     devices = coordinator.get_devices()
     entities = []
-    
+
     for device in devices:
         device_id = device.get("id")
         device_name = device.get("name", {})
-        name = device_name.get("name", "Unknown") if isinstance(device_name, dict) else str(device_name)
-        
-        attributes = device.get("attributes", [])
-        
-        has_on_off = any(
-            a.get("key") == "on_off" for a in attributes
+        name = (
+            device_name.get("name", "Unknown")
+            if isinstance(device_name, dict)
+            else str(device_name)
         )
-        
-        if has_on_off:
-            entity_type = "switch"
-            attributes_keys = [a.get("key") for a in attributes]
-            
-            if "light_brightness" in attributes_keys or "light_colour" in attributes_keys:
-                continue
-            
-            entities.append(
-                SberSwitch(coordinator, device_id, name, device)
-            )
-    
+
+        image_set_type = device.get("image_set_type", "")
+
+        if any(t in image_set_type for t in SWITCH_TYPES):
+            entities.append(SberSwitch(coordinator, device_id, name, device))
+
     async_add_entities(entities)
 
 
@@ -72,7 +68,7 @@ class SberSwitch(CoordinatorEntity, SwitchEntity):
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return None
-        
+
         reported = device.get("reported_state", [])
         for state in reported:
             if state.get("key") == "on_off":
@@ -85,7 +81,7 @@ class SberSwitch(CoordinatorEntity, SwitchEntity):
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return {}
-        
+
         device_info = device.get("device_info", {})
         return {
             "identifiers": {(DOMAIN, self._device_id)},
@@ -100,7 +96,7 @@ class SberSwitch(CoordinatorEntity, SwitchEntity):
         """Turn on switch."""
         if not self.coordinator.api:
             return
-        
+
         await self.coordinator.api.set_switch_state(self._device_id, True)
         await self.coordinator.async_request_refresh()
 
@@ -108,6 +104,6 @@ class SberSwitch(CoordinatorEntity, SwitchEntity):
         """Turn off switch."""
         if not self.coordinator.api:
             return
-        
+
         await self.coordinator.api.set_switch_state(self._device_id, False)
         await self.coordinator.async_request_refresh()

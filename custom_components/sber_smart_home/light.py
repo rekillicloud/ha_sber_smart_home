@@ -21,6 +21,9 @@ from .coordinator import SberSmartHomeCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
+LIGHT_TYPES = ("bulb", "ledstrip", "night_lamp", "cat_ledstrip_m", "cat_bulb_m")
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -41,11 +44,9 @@ async def async_setup_entry(
             else str(device_name)
         )
 
-        attributes = device.get("attributes", [])
-        has_on_off = any(a.get("key") == "on_off" for a in attributes)
-        has_brightness = any(a.get("key") == "light_brightness" for a in attributes)
+        image_set_type = device.get("image_set_type", "")
 
-        if has_on_off or has_brightness:
+        if any(t in image_set_type for t in LIGHT_TYPES):
             entities.append(SberLight(coordinator, device_id, name, device))
 
     async_add_entities(entities)
@@ -92,6 +93,8 @@ class SberLight(CoordinatorEntity, LightEntity):
         self._supports_color = has_color
         self._supports_color_temp = has_color_temp
         self._supports_brightness = has_brightness
+
+        self._attr_icon = "mdi:lightbulb"
         self._has_brightness = has_brightness
         self._has_mode = "light_mode" in attribute_keys
 
