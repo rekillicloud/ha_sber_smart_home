@@ -22,6 +22,17 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+def _create_ssl_context() -> ssl.SSLContext:
+    """Create SSL context (blocking call, done at module level)."""
+    ctx = ssl.create_default_context()
+    ctx.check_verify_flags = ssl.CERT_NONE
+    ctx.load_verify_locations(str(DEFAULT_SSL_CERT_PATH))
+    return ctx
+
+
+_SSL_CONTEXT = _create_ssl_context()
+
+
 def _generate_auth_url() -> tuple[str, str]:
     """Generate auth URL with PKCE."""
     import base64
@@ -58,16 +69,13 @@ def _generate_auth_url() -> tuple[str, str]:
 
 
 def get_ssl_context() -> ssl.SSLContext:
-    """Create SSL context for Sber API."""
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_verify_flags = ssl.CERT_NONE
-    ssl_context.load_verify_locations(str(DEFAULT_SSL_CERT_PATH))
-    return ssl_context
+    """Return pre-created SSL context."""
+    return _SSL_CONTEXT
 
 
 async def exchange_code_for_token(auth_code: str, code_verifier: str) -> dict | None:
     """Exchange authorization code for access token."""
-    ssl_context = get_ssl_context()
+    ssl_context = _SSL_CONTEXT
 
     try:
         async with aiohttp.ClientSession() as session:
