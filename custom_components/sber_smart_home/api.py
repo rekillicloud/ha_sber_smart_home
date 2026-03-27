@@ -147,12 +147,12 @@ class SberSmartHomeApi:
             value = item.get("value")
             attr_type = item.get("attr_type", "BOOL")
 
-            state_item = {"key": key, "type": attr_type}
+            state_item = {"key": key}
 
             if attr_type == "BOOL":
                 state_item["bool_value"] = value
             elif attr_type == "INTEGER":
-                state_item["integer_value"] = str(value)
+                state_item["integer_value"] = int(value)
             elif attr_type == "STRING":
                 state_item["string_value"] = str(value)
             elif attr_type == "ENUM":
@@ -172,10 +172,7 @@ class SberSmartHomeApi:
             async with self._session.request(
                 "PUT",
                 f"{GATEWAY_API}/devices/{device_id}/state",
-                headers={
-                    "X-AUTH-jwt": self._gateway_token,
-                    "Content-Type": "application/json",
-                },
+                headers={"X-AUTH-jwt": self._gateway_token},
                 json={
                     "device_id": device_id,
                     "desired_state": desired_state,
