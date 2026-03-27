@@ -167,7 +167,8 @@ class SberSmartHomeApi:
         _LOGGER.warning(
             f"set_device_state: device_id={device_id}, state={desired_state}"
         )
-        print(f"SBER_API BEFORE REQUEST: device_id={device_id}")
+
+        _LOGGER.warning(f"SBER_API BEFORE REQUEST: device_id={device_id}")
 
         try:
             async with self._session.request(
@@ -181,17 +182,14 @@ class SberSmartHomeApi:
                 },
                 ssl=self._ssl_context,
             ) as response:
-                print(
-                    f"SBER_API response: status={response.status}, url={f'{GATEWAY_API}/devices/{device_id}/state'}"
-                )
+                _LOGGER.warning(f"SBER_API response: status={response.status}")
                 if response.status >= 400:
                     text = await response.text()
-                    print(f"SBER_API error: {text}")
                     _LOGGER.error("API request failed: %s %s", response.status, text)
                     raise Exception(f"API error: {response.status}")
 
                 result = await response.json()
-                print(f"SBER_API result: {result}")
+                _LOGGER.warning(f"SBER_API result: {result}")
                 return result
         except Exception as e:
             _LOGGER.error("Request error: %s", e)
