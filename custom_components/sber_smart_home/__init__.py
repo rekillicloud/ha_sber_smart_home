@@ -23,6 +23,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    devices = coordinator.get_devices()
+    _LOGGER.info("Loaded %d devices from coordinator", len(devices))
+    for device in devices:
+        device_name = device.get("name", {})
+        name = (
+            device_name.get("name", "Unknown")
+            if isinstance(device_name, dict)
+            else str(device_name)
+        )
+        model = device.get("device_info", {}).get("model", "Unknown")
+        attrs = [a.get("key") for a in device.get("attributes", [])]
+        _LOGGER.info("Device: %s, model: %s, attributes: %s", name, model, attrs)
+
     _LOGGER.info("Loading platforms: %s", PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

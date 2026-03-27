@@ -29,6 +29,7 @@ async def async_setup_entry(
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
     devices = coordinator.get_devices()
+    _LOGGER.info("Light platform: found %d devices", len(devices))
     entities = []
 
     for device in devices:
@@ -47,21 +48,21 @@ async def async_setup_entry(
         has_on_off = any(a.get("key") == "on_off" for a in attributes)
         has_brightness = any(a.get("key") == "light_brightness" for a in attributes)
 
-        if _DEBUG:
-            model = device.get("device_info", {}).get("model", "Unknown")
-            _LOGGER.debug(
-                "Device: %s (model: %s) attributes: %s, has_on_off: %s, has_brightness: %s",
-                name,
-                model,
-                attribute_keys,
-                has_on_off,
-                has_brightness,
-            )
+        model = device.get("device_info", {}).get("model", "Unknown")
+        _LOGGER.info(
+            "Device: %s (model: %s) attributes: %s, has_on_off: %s, has_brightness: %s",
+            name,
+            model,
+            attribute_keys,
+            has_on_off,
+            has_brightness,
+        )
 
         if has_on_off or has_brightness:
+            _LOGGER.info("Adding %s as light entity", name)
             entities.append(SberLight(coordinator, device_id, name, device))
 
-    _LOGGER.info("Found %d light entities", len(entities))
+    _LOGGER.info("Creating %d light entities", len(entities))
     async_add_entities(entities)
 
 
