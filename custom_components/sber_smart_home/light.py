@@ -26,10 +26,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Sber Smart Home lights."""
+    print("=" * 60)
+    print("SBER_LIGHT: Starting light platform setup")
+
     coordinator = hass.data[DOMAIN][entry.entry_id]
 
     devices = coordinator.get_devices()
-    _LOGGER.info("Light platform: found %d devices", len(devices))
+    print(f"SBER_LIGHT: Found {len(devices)} devices")
+    _LOGGER.warning("Light platform: found %d devices", len(devices))
     entities = []
 
     for device in devices:
@@ -49,7 +53,10 @@ async def async_setup_entry(
         has_brightness = any(a.get("key") == "light_brightness" for a in attributes)
 
         model = device.get("device_info", {}).get("model", "Unknown")
-        _LOGGER.info(
+        print(
+            f"SBER_LIGHT: Device: {name}, model: {model}, has_on_off: {has_on_off}, has_brightness: {has_brightness}"
+        )
+        _LOGGER.warning(
             "Device: %s (model: %s) attributes: %s, has_on_off: %s, has_brightness: %s",
             name,
             model,
@@ -59,10 +66,13 @@ async def async_setup_entry(
         )
 
         if has_on_off or has_brightness:
-            _LOGGER.info("Adding %s as light entity", name)
+            print(f"SBER_LIGHT: Adding {name} as light entity")
+            _LOGGER.warning("Adding %s as light entity", name)
             entities.append(SberLight(coordinator, device_id, name, device))
 
-    _LOGGER.info("Creating %d light entities", len(entities))
+    print(f"SBER_LIGHT: Creating {len(entities)} light entities")
+    _LOGGER.warning("Creating %d light entities", len(entities))
+    print("=" * 60)
     async_add_entities(entities)
 
 
