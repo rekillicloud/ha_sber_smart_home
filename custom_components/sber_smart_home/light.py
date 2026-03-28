@@ -76,17 +76,14 @@ class SberLight(CoordinatorEntity, LightEntity):
         has_color_temp = "light_colour_temp" in attribute_keys
         has_brightness = "light_brightness" in attribute_keys
 
-        color_modes = set()
         if has_color:
-            color_modes.add(ColorMode.HS)
-            if has_color_temp:
-                color_modes.add(ColorMode.COLOR_TEMP)
+            color_modes = {ColorMode.HS}
         elif has_color_temp:
-            color_modes.add(ColorMode.COLOR_TEMP)
+            color_modes = {ColorMode.COLOR_TEMP}
         elif has_brightness:
-            color_modes.add(ColorMode.BRIGHTNESS)
+            color_modes = {ColorMode.BRIGHTNESS}
         else:
-            color_modes.add(ColorMode.ONOFF)
+            color_modes = {ColorMode.ONOFF}
 
         self._attr_supported_color_modes = color_modes
 
