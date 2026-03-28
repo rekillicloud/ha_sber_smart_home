@@ -326,6 +326,8 @@ class SberLight(CoordinatorEntity, LightEntity):
         if not self.coordinator.api:
             return
 
+        _LOGGER.warning(f"async_turn_on kwargs: {kwargs}")
+
         state_updates = []
 
         if "brightness" in kwargs:
@@ -412,6 +414,10 @@ class SberLight(CoordinatorEntity, LightEntity):
             v = 50 + (current_brightness * 950 // 255)
             v = max(100, min(1000, v))
             _LOGGER.warning(f"COLOR VALUE: h={int(h)}, s={int(s * 10)}, v={v}")
+            state_updates.append({"key": "on_off", "bool_value": True})
+            state_updates.append({"key": "switch_led", "bool_value": True})
+            if self._has_mode:
+                state_updates.append({"key": "light_mode", "enum_value": "colour"})
             state_updates.append(
                 {
                     "key": "light_colour",
@@ -419,9 +425,6 @@ class SberLight(CoordinatorEntity, LightEntity):
                 }
             )
             self._hs_color = hs
-            if self._has_mode:
-                state_updates.append({"key": "light_mode", "enum_value": "colour"})
-            state_updates.append({"key": "on_off", "bool_value": True})
 
         if "rgb_color" in kwargs:
             rgb = kwargs["rgb_color"]
@@ -432,6 +435,10 @@ class SberLight(CoordinatorEntity, LightEntity):
             v = 50 + (current_brightness * 950 // 255)
             v = max(100, min(1000, v))
             _LOGGER.warning(f"RGB COLOR VALUE: h={int(h)}, s={int(s * 10)}, v={v}")
+            state_updates.append({"key": "on_off", "bool_value": True})
+            state_updates.append({"key": "switch_led", "bool_value": True})
+            if self._has_mode:
+                state_updates.append({"key": "light_mode", "enum_value": "colour"})
             state_updates.append(
                 {
                     "key": "light_colour",
@@ -439,9 +446,6 @@ class SberLight(CoordinatorEntity, LightEntity):
                 }
             )
             self._hs_color = (h, s)
-            if self._has_mode:
-                state_updates.append({"key": "light_mode", "enum_value": "colour"})
-            state_updates.append({"key": "on_off", "bool_value": True})
 
         if "on_off" not in [s.get("key") for s in state_updates]:
             state_updates.append({"key": "on_off", "bool_value": True})
