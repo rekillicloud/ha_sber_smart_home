@@ -407,8 +407,11 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "hs_color" in kwargs:
             hs = kwargs["hs_color"]
             h, s = hs[0], hs[1]
+            _LOGGER.warning(f"HS_COLOR: h={h}, s={s}, full_hs={hs}")
             current_brightness = self.brightness or 128
             v = 50 + (current_brightness * 950 // 255)
+            v = max(100, min(1000, v))
+            _LOGGER.warning(f"COLOR VALUE: h={int(h)}, s={int(s * 10)}, v={v}")
             state_updates.append(
                 {
                     "key": "light_colour",
@@ -418,12 +421,14 @@ class SberLight(CoordinatorEntity, LightEntity):
             self._hs_color = hs
             if self._has_mode:
                 state_updates.append({"key": "light_mode", "enum_value": "colour"})
+            state_updates.append({"key": "on_off", "bool_value": True})
 
         if "rgb_color" in kwargs:
             rgb = kwargs["rgb_color"]
             h, s = color_RGB_to_hs(rgb[0], rgb[1], rgb[2])
             current_brightness = self.brightness or 128
             v = 50 + (current_brightness * 950 // 255)
+            v = max(100, min(1000, v))
             state_updates.append(
                 {
                     "key": "light_colour",
@@ -433,6 +438,7 @@ class SberLight(CoordinatorEntity, LightEntity):
             self._hs_color = (h, s)
             if self._has_mode:
                 state_updates.append({"key": "light_mode", "enum_value": "colour"})
+            state_updates.append({"key": "on_off", "bool_value": True})
 
         if "on_off" not in [s.get("key") for s in state_updates]:
             state_updates.append({"key": "on_off", "bool_value": True})
