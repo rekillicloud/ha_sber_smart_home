@@ -425,10 +425,13 @@ class SberLight(CoordinatorEntity, LightEntity):
 
         if "rgb_color" in kwargs:
             rgb = kwargs["rgb_color"]
+            _LOGGER.warning(f"RGB_COLOR received: {rgb}")
             h, s = color_RGB_to_hs(rgb[0], rgb[1], rgb[2])
+            _LOGGER.warning(f"RGB -> HS: h={h}, s={s}")
             current_brightness = self.brightness or 128
             v = 50 + (current_brightness * 950 // 255)
             v = max(100, min(1000, v))
+            _LOGGER.warning(f"RGB COLOR VALUE: h={int(h)}, s={int(s * 10)}, v={v}")
             state_updates.append(
                 {
                     "key": "light_colour",
