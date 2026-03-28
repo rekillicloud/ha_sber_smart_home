@@ -183,6 +183,9 @@ class SberLight(CoordinatorEntity, LightEntity):
     @property
     def color_temp(self) -> int | None:
         """Return color temperature in mireds."""
+        if self.color_mode == ColorMode.HS:
+            return None
+
         device = self.coordinator.get_device(self._device_id)
         if not device:
             return None
