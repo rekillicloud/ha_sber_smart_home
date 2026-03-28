@@ -407,10 +407,12 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "hs_color" in kwargs:
             hs = kwargs["hs_color"]
             h, s = hs[0], hs[1]
+            current_brightness = self.brightness or 128
+            v = 50 + (current_brightness * 950 // 255)
             state_updates.append(
                 {
                     "key": "light_colour",
-                    "color_value": {"h": int(h), "s": int(s * 10), "v": 1000},
+                    "color_value": {"h": int(h), "s": int(s * 10), "v": v},
                 }
             )
             self._hs_color = hs
@@ -420,10 +422,12 @@ class SberLight(CoordinatorEntity, LightEntity):
         if "rgb_color" in kwargs:
             rgb = kwargs["rgb_color"]
             h, s = color_RGB_to_hs(rgb[0], rgb[1], rgb[2])
+            current_brightness = self.brightness or 128
+            v = 50 + (current_brightness * 950 // 255)
             state_updates.append(
                 {
                     "key": "light_colour",
-                    "color_value": {"h": int(h), "s": int(s * 10), "v": 1000},
+                    "color_value": {"h": int(h), "s": int(s * 10), "v": v},
                 }
             )
             self._hs_color = (h, s)
