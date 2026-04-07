@@ -202,6 +202,13 @@ class SberSmartHomeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         refresh_token = token_data.get("refresh_token", "")
         expires_in = token_data.get("expires_in", 1800)
 
+        # Log token data to check if refresh_token is provided
+        _LOGGER.info("Token response - access_token: %s, refresh_token: %s, expires_in: %s", 
+                     "present" if access_token else "missing",
+                     "present" if refresh_token else "MISSING",
+                     expires_in)
+        _LOGGER.debug("Full token response keys: %s", token_data.keys() if token_data else "None")
+
         _LOGGER.info("Getting gateway token...")
 
         gateway_token = await get_gateway_token(access_token)

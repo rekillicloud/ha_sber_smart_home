@@ -21,6 +21,7 @@ class SberSmartHomeCoordinator(DataUpdateCoordinator):
         self._api: SberSmartHomeApi | None = None
 
         access_token = entry.data.get("access_token", "")
+        refresh_token = entry.data.get("refresh_token", "")
 
         super().__init__(
             hass,
@@ -33,21 +34,45 @@ class SberSmartHomeCoordinator(DataUpdateCoordinator):
             import aiohttp
 
             session = aiohttp.ClientSession()
-            self._api = SberSmartHomeApi(session, access_token)
+            self._api = SberSmartHomeApi(
+                session,
+                access_token,
+                refresh_token,
+                self._async_update_tokens,
+            )
 
             self._entry.async_on_unload(
                 self._entry.add_update_listener(self._async_update_listener)
             )
 
+    async def _async_update_tokens(
+        self, access_token: str, refresh_token: str, expires_in: int
+    ) -> None:
+        """Update tokens in the config entry."""
+        new_data = {
+            **self._entry.data,
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "expires_in": expires_in,
+        }
+        self.hass.config_entries.async_update_entry(self._entry, data=new_data)
+        _LOGGER.info("Tokens updated and saved to config entry")
+
     async def _async_update_listener(self, hass: HomeAssistant, entry) -> None:
         """Handle config entry update."""
         self._api = None
         access_token = entry.data.get("access_token", "")
+        refresh_token = entry.data.get("refresh_token", "")
         if access_token:
             import aiohttp
 
             session = aiohttp.ClientSession()
-            self._api = SberSmartHomeApi(session, access_token)
+            self._api = SberSmartHomeApi(
+                session,
+                access_token,
+                refresh_token,
+                self._async_update_tokens,
+            )
 
     @property
     def api(self) -> SberSmartHomeApi:

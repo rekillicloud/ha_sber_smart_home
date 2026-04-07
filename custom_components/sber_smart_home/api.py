@@ -12,11 +12,14 @@ import aiohttp
 from aiohttp import ClientSession
 
 from .const import (
+    CLIENT_ID,
     COMPANION_TOKEN_URL,
     DEFAULT_SSL_CERT_PATH,
     DEVICE_GROUPS_URL,
     DOMAIN,
     GATEWAY_API,
+    REDIRECT_URI,
+    TOKEN_ENDPOINT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,12 +39,106 @@ _SSL_CONTEXT = _create_ssl_context()
 class SberSmartHomeApi:
     """Main API client for Sber Smart Home."""
 
-    def __init__(self, session: ClientSession, access_token: str):
+    def __init__(
+        self,
+        session: ClientSession,
+        access_token: str,
+        refresh_token: str = "",
+        token_update_callback=None,
+    ):
         """Initialize API client."""
         self._session = session
         self._access_token = access_token
+        self._refresh_token = refresh_token
         self._gateway_token: str | None = None
         self._ssl_context = _SSL_CONTEXT
+        self._token_update_callback = token_update_callback
+        self._token_refresh_in_progress = False
+
+    async def _refresh_access_token(self) -> bool:
+        """Refresh the access token using the refresh token."""
+        if self._token_refresh_in_progress:
+            _LOGGER.warning("Token refresh already in progress, skipping")
+            return False
+
+        if not self._refresh_token:
+            _LOGGER.error("No refresh token available")
+            return False
+
+        self._token_refresh_in_progress = True
+
+        try:
+            _LOGGER.info("Refreshing access token...")
+
+            data = {
+                "grant_type": "refresh_token",
+                "refresh_token": self._refresh_token,
+                "client_id": CLIENT_ID,
+                "redirect_uri": REDIRECT_URI,
+            }
+
+            async with self._session.post(
+                TOKEN_ENDPOINT,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                ssl=self._ssl_context,
+            ) as response:
+                if response.status == 200:
+                    token_data = await response.json()
+                    new_access_token = token_data.get("access_token")
+                    new_refresh_token = token_data.get(
+                        "refresh_token", self._refresh_token
+                    )
+                    expires_in = token_data.get("expires_in", 1800)
+
+                    if new_access_token:
+                        self._access_token = new_access_token
+                        self._refresh_token = new_refresh_token
+
+                        _LOGGER.info(
+                            "Access token refreshed successfully, expires in %s seconds",
+                            expires_in,
+                        )
+
+                        # Save new tokens to config entry
+                        if self._token_update_callback:
+                            await self._token_update_callback(
+                                new_access_token, new_refresh_token, expires_in
+                            )
+
+                        return True
+                    else:
+                        _LOGGER.error("No access token in refresh response")
+                        return False
+                else:
+                    error_text = await response.text()
+                    _LOGGER.error(
+                        "Failed to refresh token: %s %s", response.status, error_text
+                    )
+                    return False
+        except Exception as e:
+            _LOGGER.error("Token refresh error: %s", e)
+            return False
+        finally:
+            self._token_refresh_in_progress = False
+
+    async def _validate_token(self) -> bool:
+        """Validate current access token by making a test request."""
+        try:
+            async with self._session.get(
+                COMPANION_TOKEN_URL,
+                headers={
+                    "Authorization": f"Bearer {self._access_token}",
+                    "User-Agent": "Salute+prod%2F24.08.1.15602+(Android+34;Google+sdk_gphone64_arm64)",
+                },
+                ssl=self._ssl_context,
+            ) as response:
+                if response.status == 401:
+                    _LOGGER.warning("Access token is expired")
+                    return False
+                return True
+        except Exception:
+            return False
 
     async def _request(
         self,
@@ -83,6 +180,15 @@ class SberSmartHomeApi:
 
     async def get_gateway_token(self) -> str | None:
         """Get gateway token for API access."""
+        # First check if access token is valid, refresh if needed
+        token_valid = await self._validate_token()
+        if not token_valid:
+            _LOGGER.info("Access token invalid, attempting refresh")
+            refresh_success = await self._refresh_access_token()
+            if not refresh_success:
+                _LOGGER.error("Failed to refresh access token")
+                return None
+
         try:
             async with self._session.get(
                 COMPANION_TOKEN_URL,
@@ -96,6 +202,16 @@ class SberSmartHomeApi:
                     data = await response.json()
                     self._gateway_token = data.get("token")
                     return self._gateway_token
+                elif response.status == 401:
+                    # Token expired during request, try to refresh
+                    _LOGGER.warning("Got 401 during gateway token request, refreshing")
+                    refresh_success = await self._refresh_access_token()
+                    if refresh_success:
+                        # Retry with new token
+                        return await self.get_gateway_token()
+                    else:
+                        _LOGGER.error("Token refresh failed")
+                        return None
                 else:
                     _LOGGER.error("Failed to get gateway token: %s", response.status)
         except Exception as e:
@@ -105,10 +221,9 @@ class SberSmartHomeApi:
     async def get_devices(self) -> dict[str, Any]:
         """Get all devices from Sber Smart Home."""
         if not self._gateway_token:
-            await self.get_gateway_token()
-
-        if not self._gateway_token:
-            raise Exception("No gateway token available")
+            gateway_token = await self.get_gateway_token()
+            if not gateway_token:
+                raise Exception("No gateway token available")
 
         try:
             async with self._session.get(
@@ -121,6 +236,15 @@ class SberSmartHomeApi:
             ) as response:
                 if response.status == 200:
                     return await response.json()
+                elif response.status == 401:
+                    # Gateway token might be expired, get a new one
+                    _LOGGER.warning("Gateway token expired, refreshing")
+                    self._gateway_token = None
+                    gateway_token = await self.get_gateway_token()
+                    if not gateway_token:
+                        raise Exception("Failed to refresh gateway token")
+                    # Retry with new gateway token
+                    return await self.get_devices()
                 else:
                     text = await response.text()
                     _LOGGER.error("Failed to get devices: %s %s", response.status, text)
